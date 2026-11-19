@@ -1,16 +1,25 @@
-# React + Vite
+# masrifprototype
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Interactive web prototype of the Masrif app (powered by Atlas from Bank Muamalat). No real money moves.
 
-Currently, two official plugins are available:
+Built with React and Vite. It has two views, switched from the settings icon at the top right:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Prototype**: the clickable app inside a phone frame.
+- **All screens**: every screen laid out by flow. Select one to open it live.
 
-## React Compiler
+## Run it
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev       # local development
+npm run build     # production build into dist/
+npm run screens   # rebuild and regenerate the "All screens" thumbnails
+```
 
-## Expanding the Oxlint configuration
+Run `npm run screens` after changing how any screen looks, then commit `public/screens`.
+The list of screens is in `src/screens.js`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Deploy
+
+Any static host works (Vercel, Netlify, Cloudflare Pages). Deploy the `dist` folder from `npm run build`.
+It must be served from the site root, because assets use `/masrif/...` paths.
