@@ -1,0 +1,13 @@
+﻿:root{font-family:Inter,"Segoe UI",sans-serif;color:#152e31;background:#e9f0ee;font-size:16px;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0;min-width:280px}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:default;opacity:.52}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #4daab4;outline-offset:3px}
+p,h1,h2,h3,dl,dd{margin:0}
+h1{font-size:1.5rem;line-height:1.12;letter-spacing:-.035em}
+h2{font-size:1.125rem;letter-spacing:-.025em}
+h3{font-size:1rem;letter-spacing:-.015em}
+small{font-size:.78rem;color:var(--muted)}
+svg{flex-shrink:0;vertical-align:middle}
