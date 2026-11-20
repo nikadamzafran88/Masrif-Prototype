@@ -1,6 +1,8 @@
+import { ExternalLink } from './ExternalLink'
 import { useEffect, useState } from 'react'
 import { Button, Icon } from './ui'
 import { Dropdown } from './Dropdown'
+import { Skeleton } from './Skeleton'
 import { CompanionPrayerHeader } from './CompanionPrayerHeader'
 import { qiblaBearing, useWorshipData, worshipApi } from './worship'
 
@@ -17,8 +19,15 @@ export function CompanionTool({tool}) {
  return <CompanionPrayerHeader full/>
 }
 
-function RequestNotice({request}) {
- if(request.loading) return <p className="notice" role="status">Loading…</p>
+function RequestNotice({request,reader=false}) {
+ if(request.loading) return <div className="stack" role="status">
+   <span className="loading-label">Loading content</span>
+   {[1,2,3].map(index=><div key={index} className="module-panel skeleton-content">
+     <Skeleton className="skeleton-line skeleton-title"/>
+     <Skeleton className="skeleton-line"/>
+     {reader&&<Skeleton className="skeleton-line"/>}
+   </div>)}
+ </div>
  if(request.error) return <div className="stack"><p className="notice" role="status">This content is temporarily unavailable.</p><Button kind="secondary" onClick={request.retry}>Try again</Button></div>
  return null
 }
@@ -46,7 +55,7 @@ function Quran() {
   <div className="two"><Button kind="secondary" onClick={()=>play('surah/'+surah.number)}>Recite surah</Button><Button kind="secondary" onClick={()=>{localStorage.setItem('masrif-bookmark',surah.name_translit);setBookmark(surah.name_translit)}}>{bookmark===surah.name_translit?'Bookmarked':'Bookmark surah'}</Button></div>
   {track&&<audio className="worship-audio" key={track} src={worshipApi+'/quran/audio/'+track} controls autoPlay onError={()=>setAudioError(true)}/>}
   {audioError&&<p className="notice" role="status">Audio is temporarily unavailable.</p>}
-  <RequestNotice request={reader}/>
+  <RequestNotice request={reader} reader/>
   {(reader.data?.verses||[]).map(verse=><article className="module-panel verse-card" key={verse.verse_number}>
     <div className="row"><strong>Verse {verse.verse_number}</strong><button className="text-button" onClick={()=>play(surah.number+'/'+verse.verse_number)}>Play verse</button></div>
     <div className="worship-arabic" lang="ar" dir="rtl">{verse.text_ar}</div>
@@ -229,11 +238,11 @@ function Mosques() {
 function PlaceMap({place}) {
  const lat=Number(place.lat),lon=Number(place.lng),delta=.018
  const query=new URLSearchParams({bbox:[lon-delta,lat-delta,lon+delta,lat+delta].join(','),layer:'mapnik',marker:lat+','+lon})
- return <iframe className="worship-map" title={'Map of '+place.name} loading="lazy" src={'https://www.openstreetmap.org/export/embed.html?'+query}/>
+ return <iframe sandbox="allow-scripts allow-same-origin" className="worship-map" title={'Map of '+place.name} loading="lazy" src={'https://www.openstreetmap.org/export/embed.html?'+query}/>
 }
 
 function PlaceDetails({place}) {
  const coordinates=place.lat&&place.lng?place.lat+','+place.lng:null
- return <article className="module-panel"><h2>{place.name}</h2><p>{place.address||[place.district,place.state].filter(Boolean).join(', ')}</p>{place.distance_km!=null&&<small>{Number(place.distance_km).toFixed(1)} km away</small>}{coordinates&&<a className="text-button" href={'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(coordinates)} target="_blank" rel="noreferrer">Get directions <Icon name="arrow" size={16}/></a>}</article>
+ return <article className="module-panel"><h2>{place.name}</h2><p>{place.address||[place.district,place.state].filter(Boolean).join(', ')}</p>{place.distance_km!=null&&<small>{Number(place.distance_km).toFixed(1)} km away</small>}{coordinates&&<ExternalLink href={'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(coordinates)}>Get directions <Icon name="arrow" size={16}/></ExternalLink>}</article>
 }
 

@@ -19,9 +19,10 @@ export const profileLinks = [
 
 export const accessTitles = {
  '/': 'Masrif', '/language': 'Choose your language', '/welcome': 'Welcome to Masrif',
- '/start': 'Welcome', '/register': 'Register', '/register/otp': 'Verify',
+ '/start': 'Masrif', '/register': 'Register', '/register/otp': 'Verify',
  '/register/details': 'Your details', '/register/mykad': 'Verify identity', '/register/selfie': 'Verify identity',
  '/register/verification': 'Verification result', '/register/attention': 'Verification needs attention',
+ '/register/identity-review': 'Identity review', '/register/address': 'Address',
  '/register/guardian': 'Guardian required', '/register/consent': 'Terms and consent',
  '/register/pin': 'Create PIN', '/register/biometrics': 'Enable biometrics', '/register/funding': 'Activate account', '/register/tour': 'Quick tour',
  '/register/complete': 'Registration success', '/register/pending': 'Activation pending',
@@ -34,6 +35,7 @@ export const accessTitles = {
 
 
 export const profileDetailTitles = {
+ 'settings/delete-account':'Delete account',
  'security/pin':'Change PIN', 'settings/appearance':'Appearance', 'settings/language':'Language',
  'help/faq':'FAQ', 'help/contact':'Contact support', 'help/report':'Report a problem', 'help/lock':'Lock my account',
  'legal/terms':'Terms of Use', 'legal/privacy':'Privacy Notice',

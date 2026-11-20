@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { balanceOf, money, confirmedTransferRecipient, resolvePending, seed, settle, today } from './demo'
+import { balanceOf, money, confirmedTransferRecipient, matchingPendingTransfer, resolvePending, seed, settle, today } from './demo'
 import { Button, Icon, Tile } from './ui'
 import { Transfer } from './Transfer'
 import { Extras } from './Extras'
@@ -8,7 +8,7 @@ import { StatementView } from './StatementView'
 import { AddMoney } from './AddMoney'
 import { Zakat } from './Zakat'
 import { AddCard, CardViews } from './CardViews'
-import { AccessFlow } from './AccessFlow'
+import { AccessFlow, RegistrationProgress } from './AccessFlow'
 import { attemptsKey, demoContactKey, lockKey, nameInitials, recoveryNoticeKey, signedOutKey, signupDraftKey } from './demoAuth'
 import { Inbox, ProfileMenu, ProfilePage } from './ProfileViews'
 import { PlanningView, SpendingView } from './AccountViews'
@@ -20,6 +20,17 @@ import { readDemo } from './demoStorage'
 import './App.css'
 
 const tabs = [['Home','home'],['Account','account'],['Pay','scan'],['Features','grid','modules'],['Profile','user']]
+const accountServices = [
+  {label:'Account documents', actions:[
+    ['Transaction history','/account/transactions','history'],
+    ['View statement','/account/statement','statement'],
+    ['View receipts','/account/receipts','receipt'],
+  ]},
+  {label:'Account management', actions:[
+    ['Card','/account/card','card'],
+    ['Profile','/profile','user'],
+  ]},
+]
 const navIndex = slug => tabs.findIndex(([label,,target=label.toLowerCase()])=>target===slug)
 const slideBetween = (from, to) => to > from ? 'slide-left' : 'slide-right'
 const revealGroup = '.stack, .module-flow, .module-grid, .tiles, .two'
@@ -205,10 +216,11 @@ export default function App() {
   function submit(details,amount,status) {
     const recipient = confirmedTransferRecipient(details)
     if (!recipient || !Number.isSafeInteger(amount) || amount <= 0) return
+    if (matchingPendingTransfer(records,recipient,amount)) {go('/transfer/review',true);return}
     if(submitted.current) {go('/transfer/result/'+submitted.current,true); return}
     const id = details.id || crypto.randomUUID()
     submitted.current=id
-    const item = {id, name:recipient.name, category:'Transfers', amount:-amount, date:today(), bank:details.bank, account:details.account.slice(-4), reference:details.reference, status}
+    const item = {id, name:recipient.name, category:'Transfers', amount:-amount, date:today(), bank:details.bank, account:details.account.slice(-4), recipientAccount:recipient.account, reference:details.reference, status}
     setRecords(previous=>settle(previous,item))
     go('/transfer/result/'+id,true)
   }
@@ -223,7 +235,6 @@ export default function App() {
   const step = path.split('/')[2]
   const access = Object.hasOwn(accessTitles,path)
   const [exitRequested,setExitRequested] = useState(false)
-  const canExitRegistration = path==='/register'||(/^\/register\//.test(path)&&!['/register/complete','/register/tour'].includes(path))
   const profileName = readDemo(demoContactKey,{})?.name || 'Farah Amin'
   const firstName = profileName.trim().split(/\s+/)[0]
   const home = path==='/home'
@@ -267,7 +278,7 @@ export default function App() {
         <button className="icon-button home-notifications" aria-label="Notifications" onClick={()=>go('/inbox')}><Icon name="bell" size={21}/></button>
       </header>
       <div className="hero">
-      <div className="hero-content"><div className="home-balance"><small>ATLAS by Bank Muamalat</small><span className="balance-number">{hidden?'RM ••••••':money(balance)}</span><div className="home-account-visibility"><small>Account •••• 4812</small><BalanceToggle hidden={hidden} toggle={()=>setHidden(!hidden)}/></div></div></div>
+      <div className="hero-content"><div className="home-balance"><small>ATLAS by Bank Muamalat</small><span className="balance-number">{hidden?'RM ••••••':money(balance)}</span><div className="home-account-visibility"><small>Account 0000 0000 4812</small><BalanceToggle hidden={hidden} toggle={()=>setHidden(!hidden)}/></div></div></div>
       </div>
     </> : (path==='/'||path==='/welcome'||path==='/login'||path==='/login/welcome')?null:<header className={'page-header '+(top?'hub':'')+(companionHome && compactHeader?' compact':'')}>{!top&&<button className="icon-button" aria-label="Back" onClick={back}><Icon name="back"/></button>}{companionHome&&compactHeader&&companionSummary?<div className="companion-compact-prayer" aria-label="Muslim Companion, next prayer">
       <span><b>{companionSummary.name}</b> <strong>{companionSummary.time}</strong></span>
@@ -276,8 +287,9 @@ export default function App() {
     </div>:<h1>{title}</h1>}</header>}
     <main>
     {access&&<>
-      {canExitRegistration&&<div className="registration-exit"><button type="button" className="text-button" onClick={()=>setExitRequested(true)}>Save and exit</button></div>}
-      <AccessFlow path={path} go={go} dark={dark} exitRequested={exitRequested} onCancelExit={()=>setExitRequested(false)}/>
+      <RegistrationProgress path={path} onExit={()=>setExitRequested(true)}/>
+      <AccessFlow path={path} go={go} dark={dark} exitRequested={exitRequested} onCancelExit={()=>setExitRequested(false)}
+        onSignInBack={()=>Object.hasOwn(accessTitles,history.state?.from)?back():go('/welcome',true,'','slide-right')}/>
     </>}
     {home && <>
 
@@ -296,9 +308,36 @@ export default function App() {
       <div className="segments account-tabs" style={{'--active-tab':tabIndex}} role="group" aria-label="Account views">{accountTabs.map(([label,target],index)=><button key={label} aria-pressed={accountTab===label} onClick={()=>selectAccountTab(target,index)}>{label}</button>)}</div>
       <div className="account-tab-viewport" ref={accountViewport} tabIndex={0} role="region" aria-label={accountTab}>
       <div className="account-tab-panel" key={accountTab} data-direction={navigationMotion==='next'||navigationMotion==='previous' ? navigationMotion : undefined}>
-      {accountTab==='Overview'&&<><div className="balance-card"><strong>ATLAS Savings Account-i</strong><p>Account number · •••• 4812</p><small>Available balance</small><span className="balance-number">{hidden?"RM ••••••":money(balance)}</span><BalanceToggle hidden={hidden} toggle={()=>setHidden(!hidden)}/></div>
+      {accountTab==='Overview'&&<><div className="balance-card">
+        <strong>ATLAS Savings Account-i</strong>
+        <p className="account-number">0000 0000 4812</p>
+        <div className="account-balance-row">
+          <div className="account-balance-amount">
+            <small>Available balance</small>
+            <span className="balance-number">{hidden?"RM ••••••":money(balance)}</span>
+          </div>
+          <BalanceToggle hidden={hidden} toggle={()=>setHidden(!hidden)}/>
+        </div>
+      </div>
       <div className="tiles account-actions"><Tile icon="plus" label="Add money" onClick={()=>go('/account/add')}/><Tile icon="transfer" label="Transfer" onClick={newTransfer}/><Tile icon="in" label="Receive" onClick={()=>go('/pay/receive')}/><button className="tile" ref={more} onClick={()=>sheet.current.showModal()}><span className="tile-icon"><Icon name="more"/></span>More</button></div>
-      <dialog ref={sheet} className="sheet" onClose={()=>more.current?.focus()} onClick={event=>{if(event.target===sheet.current) sheet.current.close()}} aria-labelledby="services-title"><div className="sheet-body stack"><div className="handle"/><div className="row"><h2 id="services-title">Account services</h2><button className="icon-button" aria-label="Close account services" onClick={()=>sheet.current.close()}><Icon name="close"/></button></div>{[['Transaction history','/account/transactions'],['View statement','/account/statement'],['View receipts','/account/receipts'],['Card','/account/card'],['Profile','/profile']].map(([label,target])=><Button key={label} kind="secondary" onClick={()=>{sheet.current.close();go(target)}}>{label}</Button>)}</div></dialog>
+      <dialog ref={sheet} className="sheet account-more-sheet" onClose={()=>more.current?.focus()} onClick={event=>{if(event.target===sheet.current) sheet.current.close()}} aria-labelledby="services-title">
+        <div className="account-more-body">
+          <header className="account-more-header">
+            <h2 id="services-title">More</h2>
+            <button type="button" className="icon-button" aria-label="Close More" autoFocus onClick={()=>sheet.current.close()}><Icon name="close"/></button>
+          </header>
+          <div className="account-more-scroll">
+            {accountServices.map(({label,actions})=><ul key={label} className="account-more-group" aria-label={label}>
+              {actions.map(([title,target,icon])=><li key={target}>
+                <button type="button" className="account-more-action" onClick={()=>{sheet.current.close();go(target)}}>
+                  <span className="account-more-icon"><Icon name={icon} size={21}/></span>
+                  <span>{title}</span><Icon name="chevron" size={17}/>
+                </button>
+              </li>)}
+            </ul>)}
+          </div>
+        </div>
+      </dialog>
 
       <section aria-label="Money in and out"><div className="two">{[['Money in','in',1],['Money out','out',-1]].map(([label,icon,direction])=><div className="metric" key={label}><img src={'/masrif/money-'+icon+'.svg'} width="32" height="32" alt=""/><small>{label} · Nov 2026</small><strong>{hidden?"RM ••••":money(periodTotal(direction))}</strong></div>)}</div></section><section><h2>Recent transactions</h2><button className="history-link" onClick={()=>{setQuery('');setFilter('All');go('/account/transactions')}}>View all transactions <Icon name="arrow" size={16}/></button><RecordRows items={records.slice(0,3)} open={showRecord}/></section></>}
       {accountTab==='Spending'&&<SpendingView records={posted} trends={spendingTrends} go={go} month={spendingMonth} setMonth={setSpendingMonth}
@@ -323,7 +362,7 @@ export default function App() {
       }}>Reset filters</button>
       <RecordRows items={transactionRows.filter(row=>(scopedStatement||filter==='All'||(filter==='Money in'?row.amount>0:row.amount<0))&&[row.name,row.category,row.reference,row.id].join(' ').toLowerCase().includes(query.toLowerCase().trim()))} open={showRecord}/>
     </div>}
-    {transfer&&<Transfer key={step} step={step} draft={draft} setDraft={updateDraft} go={go} balance={balance} submit={submit}/>}
+    {transfer&&<Transfer key={step} step={step} draft={draft} setDraft={updateDraft} go={go} balance={balance} records={records} submit={submit}/>}
     {receipt&&item&&(!item.status||item.status==='Successful')&&<><Receipt item={item}/><Button kind="secondary" onClick={back}>Done</Button></>}
     {(detail||result||(receipt&&(!item||item.status&&item.status!=='Successful')))&&<div className="stack transaction-detail">{item?<><div className="result-card payment-result-card" data-status={item.status||"Successful"}>{result&&<div className="payment-result-symbol" aria-hidden="true">{item.status==="Pending"?"…":item.status==="Failed"?"!":"✓"}</div>}<small>{item.status || 'Successful'} · Demo</small><h2>{result?(item.status==='Pending'?'Payment is being checked':item.status==='Failed'?'Payment not completed':'Payment successful'):money(Math.abs(item.amount))}</h2><p>{result?money(Math.abs(item.amount))+' · '+item.name:item.name}</p></div><dl className="details"><dt>Reference</dt><dd>{item.reference || item.id}</dd><dt>Date</dt><dd>{item.date}</dd><dt>Category</dt><dd>{item.category}</dd>{item.bank&&<><dt>Bank</dt><dd>{item.bank}</dd><dt>Account</dt><dd>•••• {item.account}</dd></>}</dl>
     {item.status==='Pending'&&<><div className="module-panel"><h3>What happens next</h3><p>Wait for the final status before sending the same payment again.</p></div><Button onClick={()=>go('/account/transactions')}>View transactions</Button><Button kind="secondary" onClick={()=>setRecords(previous=>resolvePending(previous,item.id))}>Check demo status</Button></>}
@@ -343,7 +382,7 @@ export default function App() {
       setFilter('All')
       submitted.current=null
       for(const key of ['masrif-highlight','masrif-recent','masrif-demo-prayer-city']) sessionStorage.removeItem(key)
-      for(const key of ['masrif-plan','masrif-planning-budgets','masrif-planning-goals','masrif-planning-reminders','masrif-appearance','masrif-reading','masrif-reading-number','masrif-bookmark','masrif-demo-biometrics','masrif-demo-programmes','masrif-demo-marketing','masrif-demo-recipients','masrif-demo-pintar-applications','masrif-demo-procurement','masrif-demo-personal-contact','masrif-demo-support-tickets','masrif-demo-alerts','masrif-demo-marketing-history','masrif-demo-consent','masrif-demo-device-removed']) localStorage.removeItem(key)
+      for(const key of ['masrif-plan','masrif-planning-budgets','masrif-planning-goals','masrif-planning-reminders','masrif-appearance','masrif-language','masrif-reading','masrif-reading-number','masrif-bookmark','masrif-demo-biometrics','masrif-demo-programmes','masrif-demo-marketing','masrif-demo-recipients','masrif-demo-pintar-applications','masrif-demo-procurement','masrif-demo-personal-contact','masrif-demo-support-tickets','masrif-demo-alerts','masrif-demo-marketing-history','masrif-demo-consent','masrif-demo-device-removed']) localStorage.removeItem(key)
       sessionStorage.removeItem('masrif-session-demo-pin')
       sessionStorage.removeItem('masrif-session-demo-lock')
       for(const key of [signupDraftKey,attemptsKey,recoveryNoticeKey,signedOutKey]) sessionStorage.removeItem(key)

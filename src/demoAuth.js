@@ -7,7 +7,19 @@ export const signupDraftKey = 'masrif-session-registration'
 export const attemptsKey = 'masrif-session-pin-attempts'
 export const recoveryNoticeKey = 'masrif-session-pin-reset'
 export const signedOutKey = 'masrif-session-signed-out'
-export const demoMobile = value => /^(?:\+?60|0)1\d{8,9}$/.test(value.replace(/[\s-]/g,''))
+export function normalizeMalaysianMobile(value) {
+  const compact = value.trim().replace(/[\s()-]/g,'')
+  const national = compact.replace(/^(?:\+60|60|0)/,'')
+  const valid = national.startsWith('11') ? /^11\d{8}$/.test(national) : /^1\d{8}$/.test(national)
+  return valid?'+60'+national:''
+}
+
+export function formatMobileDigits(normalized) {
+  const digits = normalized.slice(3)
+  return [digits.slice(0,2),digits.slice(2,-4),digits.slice(-4)].join(' ')
+}
+
+export const demoMobile = value => Boolean(normalizeMalaysianMobile(value))
 export const storedDemoPin = () => sessionStorage.getItem(savedPinKey) || demoCode
 
 export function nameInitials(name) {

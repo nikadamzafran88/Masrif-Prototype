@@ -1,3 +1,4 @@
+import { ExternalLink } from './ExternalLink'
 import { useState } from 'react'
 import { Button } from './ui'
 import { Dropdown } from './Dropdown'
@@ -6,6 +7,7 @@ import { FlowDetails, FlowRow, FlowStep } from './FeatureFlow'
 import { readDemo } from './demoStorage'
 import { money } from './demo'
 import { addDemoAlert, marketingHistoryKey } from './profileDemo'
+import { AtlasSupport, PrototypePrivacy } from './PrivacyPages'
 
 const contactKey = demoContactKey
 const ticketsKey = 'masrif-demo-support-tickets'
@@ -51,7 +53,8 @@ export function PersonalDetails() {
     </form>
   </FlowStep>
   return <div className="stack profile-details">
-    <FlowDetails rows={[[ 'Full name',saved.name||'Farah Amin' ],['MyKad number','••••••-••-••••'],['Mobile number',saved.mobile],['Email address',saved.email]]}/>
+    <FlowDetails rows={[[ 'Full name',saved.name||'Farah Amin' ],['MyKad number',saved.maskedMykad||'••••••-••-••••'],['Mobile number',saved.mobile],['Email address',saved.email],
+      ...(saved.address?[['Residential address',[saved.address.line1,saved.address.line2,saved.address.postcode+' '+saved.address.city,saved.address.state].filter(Boolean).join(', ')]]:[])]}/>
     <p className="notice">Your verified name and MyKad are locked. Contact changes require a demo verification code. An identity check is also required for mobile changes.</p>
     <Button onClick={()=>{setDraft(saved);setNotice('');setPage('edit')}}>Edit contact details</Button>
     {notice&&<p className="notice" role="status">{notice}</p>}
@@ -169,7 +172,8 @@ export function SupportDesk({records=[]}) {
       {tickets.length ? tickets.map(ticket=><FlowRow key={ticket.id} title={ticket.incident||ticket.topic} detail={ticket.id+' · '+(ticket.status||'Open')} onClick={()=>{setSelectedId(ticket.id);setPage('ticket')}}/>)
         : <p>No tickets yet.</p>}
     </section>
-    <a className="text-button" href="https://atlasmuamalat.com.my/faqs/" target="_blank" rel="noreferrer">Visit the Atlas help centre</a>
+    <ExternalLink href="https://atlasmuamalat.com.my/faqs/">Visit the Atlas help centre</ExternalLink>
+    <AtlasSupport/>
   </div>
 }
 
@@ -182,18 +186,11 @@ export function DemoLegal({section}) {
       : <div className="module-panel"><h3>No registration consent recorded</h3><p>Demo registration consent will appear here.</p></div>}
     <section className="stack"><h3>Marketing changes</h3>{marketingHistory.length ? marketingHistory.map(({enabled,date},index)=><FlowRow key={index} title={enabled?"Opted in":"Opted out"} detail={formatDate(date)}/>) : <p>No changes recorded.</p>}</section>
   </div>
-  const privacy = section==='legal/privacy'
+  if (section==='legal/privacy') return <div className="stack"><PrototypePrivacy/><ExternalLink href="/privacy">Open the public privacy notice</ExternalLink></div>
   return <article className="stack demo-legal">
     <p className="notice">Masrif prototype notice</p>
-    {privacy ? <>
-      <section><h3>What stays on this device</h3><p>Demo transactions, settings, contact details and application records can be saved in browser storage.</p></section>
-      <section><h3>Device permissions</h3><p>Some screens can use your camera or approximate location when you allow access. QR images are decoded in the browser.</p></section>
-      <section><h3>Online content</h3><p>Worship tools request public content and schedules. The demo banking and support screens do not send applications, payments or messages.</p></section>
-      <section><h3>Clear demo data</h3><p>Use Reset demo account in App settings or clear this site’s data in your browser.</p></section>
-    </> : <>
       <section><h3>Using the demo</h3><p>Explore the screens with fictional details. Account balances, payment results and application statuses are for demonstration.</p></section>
       <section><h3>Payments and applications</h3><p>Demo actions do not transfer funds, issue cards, submit official documents or enter into a contract.</p></section>
       <section><h3>Official services</h3><p>Use the relevant provider’s official service for live transactions, applications and published terms.</p></section>
-    </>}
   </article>
 }

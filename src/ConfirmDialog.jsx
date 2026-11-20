@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import { Button } from './ui'
 
-export function ConfirmDialog({title,children,action,onConfirm,onCancel}) {
+export function ConfirmDialog({title,children,action,onConfirm,onCancel,cancelLabel='Cancel',destructive=false}) {
   const dialog = useRef(null)
   const cancel = useRef(null)
   const id = useId()
@@ -19,8 +19,8 @@ export function ConfirmDialog({title,children,action,onConfirm,onCancel}) {
     <div className="stack">
       <h2 id={id}>{title}</h2>
       {children}
-      <Button onClick={onConfirm}>{action}</Button>
-      <button ref={cancel} className="button secondary" onClick={onCancel}>Cancel</button>
+      <Button kind={destructive?'danger':'primary'} onClick={onConfirm}>{action}</Button>
+      <button ref={cancel} className="button secondary" onClick={onCancel}>{cancelLabel}</button>
     </div>
   </dialog>
 }

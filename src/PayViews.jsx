@@ -9,6 +9,7 @@ import { cashierCode, receiveCode, usePaymentCode } from './paymentCodes'
 import { demoCode, storedDemoPin } from './demoAuth'
 import { biometricKey } from './profileDemo'
 import { ConfirmDialog } from './ConfirmDialog'
+import { Skeleton } from './Skeleton'
 
 const payActions = [['Scan to pay','scan'],['Receive money','receive'],['Show payment code','code'],['Transfer','transfer'],['Saved recipients','recipients']]
 const merchant='Campus Bookshop'
@@ -67,7 +68,12 @@ export function PaymentApproval({name,amount,onSubmit,onCancel,transfer=false}) 
    }
    approve()
  }
- if(processing) return <div className="result-card payment-processing" role="status"><span className="payment-spinner" aria-hidden="true"/><h2>{transfer?'Processing transfer':'Processing payment'}</h2><p>Please do not close the app.</p></div>
+ if(processing) return <div className="result-card payment-processing" role="status">
+   <Skeleton className="payment-result-skeleton"/>
+   <Skeleton className="skeleton-line skeleton-title"/>
+   <h2>{transfer?'Processing transfer':'Processing payment'}</h2>
+   <p>Please do not close the app.</p>
+ </div>
  return <section className="stack payment-approval">
    <PaymentSummary label={transfer?"Verify your transfer":"Approve payment"} name={name} amount={amount}/>
    {transfer&&<p>Verify your identity to send this transfer.</p>}
@@ -177,7 +183,10 @@ function CashierCode({onPayment}) {
 function PaymentCodeDisplay({result,label}) {
  return <div className="payment-code-frame code-outline generated-code">
   {result?.image ? <img className="generated-qr" src={result.image} width="200" height="200" alt={label}/> :
-    <p role="status">{result?.error?'Unable to generate a demo code.':'Preparing demo code…'}</p>}
+    result?.error ? <p role="status">Unable to generate a demo code.</p> : <div className="code-loading" role="status">
+      <span className="loading-label">Preparing demo code</span>
+      <Skeleton className="qr-skeleton"/>
+    </div>}
   {result?.bars&&<img className="generated-barcode" src={result.bars} alt="Demo cashier barcode"/>}
  </div>
 }

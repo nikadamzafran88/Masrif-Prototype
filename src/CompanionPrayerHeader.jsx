@@ -1,6 +1,8 @@
+import { ExternalLink } from './ExternalLink'
 import { useEffect, useState } from 'react'
 import { Button, Icon } from './ui'
 import { Dropdown } from './Dropdown'
+import { Skeleton } from './Skeleton'
 
 const timeZone = 'Asia/Kuala_Lumpur'
 const masihiDate = new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone})
@@ -111,13 +113,17 @@ export function CompanionPrayerHeader({onPrayerTimes,onSummary,full=false}) {
      <div className="prayer-next">
        <time className="companion-live-clock" dateTime={now.toISOString()} aria-label="Current Malaysia time">{liveClock.format(now)}</time>
        {full
-         ? <small>{next ? 'Next prayer · '+next.name+' · In '+countdown : !current ? 'Loading timetable…' : 'Next prayer time unavailable'}</small>
+         ? current ? <small>{next ? 'Next prayer · '+next.name+' · In '+countdown : 'Next prayer time unavailable'}</small> : <Skeleton className="skeleton-line prayer-next-skeleton"/>
          : <button className="text-button prayer-link" onClick={onPrayerTimes}>{next ? 'Next prayer · '+next.name+' · In '+countdown : 'View prayer times'}</button>}
      </div>
+     {!current&&<div className="prayer-times prayer-loading" role="status">
+       <span className="loading-label">Loading prayer timetable</span>
+       {prayers.map(([name])=><div key={name}><span>{name}</span><Skeleton className="skeleton-line"/></div>)}
+     </div>}
      {today.length>0&&<dl className="prayer-times">{today.map(({name,time})=><div className={name===nextName&&upcoming?'next-prayer':''} key={name}><dt>{name}</dt><dd>{full?time:time.split(' ')[0]}</dd></div>)}</dl>}
      {full&&current&&today.length===0&&<p role="status">The current timetable is unavailable for {label}.</p>}
    </section>
    {full&&current&&today.length===0&&<Button kind="secondary" onClick={()=>setAttempt(value=>value+1)}>Retry timetable</Button>}
-   {full&&<a className="text-button" href="https://www.e-solat.gov.my/" target="_blank" rel="noreferrer">JAKIM e-Solat · {zone}</a>}
+   {full&&<ExternalLink href="https://www.e-solat.gov.my/">JAKIM e-Solat · {zone}</ExternalLink>}
  </div>
 }

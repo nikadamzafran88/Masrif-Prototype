@@ -6,6 +6,7 @@ import { demoContactKey, lockKey, nameInitials, signedOutKey } from './demoAuth'
 import { alertsKey, addDemoAlert, biometricKey, setMarketingPreference } from './profileDemo'
 import { readDemo } from './demoStorage'
 import { ConfirmDialog } from './ConfirmDialog'
+import { DeleteDemoAccount } from './PrivacyPages'
 
 const appearanceLabels = {System:'Use device settings',Light:'Light',Dark:'Dark'}
 const notices = [
@@ -56,9 +57,11 @@ export function ProfilePage({section,go,appearance,applyAppearance,records,reset
  const [confirmReset,setConfirmReset]=useState(false)
  const open=slug=>()=>go('/profile/'+slug)
  if(section==='personal') return <PersonalDetails/>
+ if(section==='settings/delete-account') return <DeleteDemoAccount inApp/>
  if(section==='settings') return <section className="stack"><h2>Preferences</h2>
   <ProfileRow title={'Appearance · '+(appearanceLabels[choice]||appearanceLabels.System)} onClick={open('settings/appearance')}/>
   <ProfileRow title="Language · English" onClick={open('settings/language')}/>
+  <ProfileRow title="Delete account" detail="Remove saved Masrif demo data" onClick={open('settings/delete-account')}/>
   <details className="profile-disclosure"><summary>Demo controls</summary><Button kind="secondary" onClick={()=>setConfirmReset(true)}>Reset demo account</Button></details>
   {confirmReset&&<ConfirmDialog title="Reset the demo account?" action="Reset demo account" onConfirm={reset} onCancel={()=>setConfirmReset(false)}><p>This clears demo transactions, applications, support tickets and preferences on this device.</p></ConfirmDialog>}
  </section>
@@ -95,7 +98,10 @@ export function ProfilePage({section,go,appearance,applyAppearance,records,reset
  if(section==='legal/licences') return <section className="stack"><ProfileRow title="React" detail="MIT licence"/><ProfileRow title="Vite" detail="MIT licence"/></section>
  if(section.startsWith('legal/')) return <DemoLegal section={section}/>
  if(section==='help') return <section className="stack">
-  <form className="row profile-search" onSubmit={event=>{event.preventDefault();go('/profile/help/faq',false,'?q='+encodeURIComponent(query.trim()))}}><input type="search" aria-label="Search help" placeholder="Search help" value={query} onChange={event=>setQuery(event.target.value)}/><Button>Search</Button></form>
+  <form className="profile-search" role="search" onSubmit={event=>{event.preventDefault();go('/profile/help/faq',false,'?q='+encodeURIComponent(query.trim()))}}>
+    <input type="search" aria-label="Search help" placeholder="Search help" value={query} onChange={event=>setQuery(event.target.value)}/>
+    <button type="submit" className="icon-button" aria-label="Search"><Icon name="search" size={20}/></button>
+  </form>
   <ProfileRow title="FAQ" detail="Common questions" onClick={open('help/faq')}/>
   <ProfileRow title="Contact support" detail="Create and review demo tickets" onClick={open('help/contact')}/>
   <ProfileRow title="Report fraud or lost phone" detail="Act quickly" onClick={open('help/report')}/>
@@ -128,10 +134,10 @@ function Devices() {
  return <section className="stack">
   <ProfileRow title="This phone" detail="Current demo device" trailing={<small>Current</small>}/>
   {!removed&&<ProfileRow title="Old phone" detail="Android · Demo device" trailing={<button className="text-button" onClick={()=>setConfirm(true)}>Remove</button>}/>}
-  {confirm&&<div className="module-panel"><h3>Remove old phone?</h3>
-   <Button onClick={()=>{localStorage.setItem('masrif-demo-device-removed','true');setRemoved(true);setConfirm(false);addDemoAlert('Security','Device removed','Old phone was removed from your demo account.')}}>Remove demo device</Button>
-   <Button kind="secondary" onClick={()=>setConfirm(false)}>Cancel</Button>
-  </div>}
+  {confirm&&<ConfirmDialog title="Remove old phone?" action="Remove device" onCancel={()=>setConfirm(false)}
+   onConfirm={()=>{localStorage.setItem('masrif-demo-device-removed','true');setRemoved(true);setConfirm(false);addDemoAlert('Security','Device removed','Old phone was removed from your demo account.')}}>
+   <p>Old phone will be disconnected from your demo account.</p>
+  </ConfirmDialog>}
   {removed&&<p className="notice" role="status">The old demo device was removed.</p>}
  </section>
 }

@@ -1,3 +1,4 @@
+import { ExternalLink } from './ExternalLink'
 import { useState } from 'react'
 import { money, parseAmount } from './demo'
 import { Button } from './ui'
@@ -39,9 +40,9 @@ export function ZakatCalculator({draft, onBack, onPay}) {
         <label>Annual deductions allowed by {authority} (RM)<input inputMode="decimal" value={deductions} onChange={event=>setDeductions(event.target.value)} placeholder="0.00"/></label>
         <label>Official nisab for the assessment year (RM)<input inputMode="decimal" value={nisab} onChange={event=>setNisab(event.target.value)} placeholder="Enter the official threshold"/></label>
       </>}
-      <a className="text-button" href={fitrah ? body.fitrah : body.income} target="_blank" rel="noreferrer">
+      <ExternalLink href={fitrah ? body.fitrah : body.income}>
         {fitrah ? 'View official rates' : 'Open official income guidance'}
-      </a>
+      </ExternalLink>
     </section>
     {(fitrah ? validCounts && estimate > 0 : validIncome) && <section className="module-panel zakat-checkout" aria-live="polite">
       <h3>Estimated zakat</h3>

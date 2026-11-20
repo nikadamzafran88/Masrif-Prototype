@@ -1,14 +1,16 @@
 ﻿import { useState } from 'react'
 import { PaymentAmount, PaymentApproval, PaymentSummary } from './PayViews'
-import { confirmedTransferRecipient, demoRecipientFor, money, parseAmount, sampleRecipientFor } from './demo'
+import { confirmedTransferRecipient, demoRecipientFor, matchingPendingTransfer, money, parseAmount, sampleRecipientFor } from './demo'
 import { searchBanks } from './bankCatalogue'
 import { Button, Icon } from './ui'
 import { BankLogo } from './BankLogo'
 import { steps } from './routes'
+import { ConfirmDialog } from './ConfirmDialog'
 
-export function Transfer({step, draft, setDraft, go, balance, submit}) {
+export function Transfer({step, draft, setDraft, go, balance, records, submit}) {
  const [lookupError,setLookupError] = useState('')
  const [bankQuery,setBankQuery] = useState('')
+ const [checkPending,setCheckPending] = useState(false)
  const matchingBanks=step==='bank'?searchBanks(bankQuery):[]
  const index = steps.indexOf(step)
  const next = target => go('/transfer/'+target)
@@ -16,6 +18,7 @@ export function Transfer({step, draft, setDraft, go, balance, submit}) {
  const validAccount = /^\d{8,16}$/.test(draft.account || '')
  const recipient = demoRecipientFor(draft.bank,draft.account)
  const confirmed = confirmedTransferRecipient(draft)
+ const pending = matchingPendingTransfer(records,confirmed,amount)
  const amountReady = amount>0 && amount<=balance
  const patch = values => setDraft({...draft,...values})
  const changeAccount = account => {
@@ -59,8 +62,12 @@ export function Transfer({step, draft, setDraft, go, balance, submit}) {
      <label>Recipient reference (optional)<input maxLength={40} value={draft.reference||''} onChange={event=>patch({reference:event.target.value})} placeholder="e.g. Lunch"/></label>
      <Button disabled={!amountReady}>Review transfer</Button>
    </form>}
-   {step==='review' && <><PaymentSummary label="Total to send" name={recipient.name} amount={amount}/><Summary recipient={recipient} mask amount={amount} reference={draft.reference}/><Button onClick={()=>next('authorise')}>Continue to approval</Button><Button kind="secondary" onClick={()=>next('amount')}>Edit amount or reference</Button><button className="text-button" onClick={()=>go(draft.origin||'/pay')}>Cancel transfer</button></>}
-   {step==='authorise' && <PaymentApproval transfer name={recipient.name} amount={amount} onSubmit={status=>submit(draft,amount,status)} onCancel={()=>next('review')}/>}
+   {step==='review' && <><PaymentSummary label="Total to send" name={recipient.name} amount={amount}/><Summary recipient={recipient} mask amount={amount} reference={draft.reference}/><Button onClick={()=>pending?setCheckPending(true):next('authorise')}>Continue to approval</Button><Button kind="secondary" onClick={()=>next('amount')}>Edit amount or reference</Button><button className="text-button" onClick={()=>go(draft.origin||'/pay')}>Cancel transfer</button></>}
+   {step==='authorise'&&!pending&&<PaymentApproval transfer name={recipient.name} amount={amount} onSubmit={status=>submit(draft,amount,status)} onCancel={()=>next('review')}/>}
+   {pending&&(checkPending||step==='authorise')&&<ConfirmDialog title="Matching transfer still pending" action="View pending transfer" cancelLabel="Back to review"
+     onConfirm={()=>go('/transfer/result/'+pending.id)} onCancel={()=>step==='authorise'?next('review'):setCheckPending(false)}>
+     <p>A transfer of {money(amount)} to {pending.name} is still pending. Check its status before sending again.</p>
+   </ConfirmDialog>}
  </div>
 }
 

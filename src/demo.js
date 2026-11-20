@@ -28,6 +28,13 @@ export function resolvePending(records, id) {
   return records.map(record => record === pending ? {...record,status} : record)
 }
 
+export function matchingPendingTransfer(records, recipient, amount) {
+  if (!recipient || amount<=0) return undefined
+  return records.find(item=>item.status==='Pending'&&item.category==='Transfers'&&item.amount===-amount&&item.bank===recipient.bank&&(
+    item.recipientAccount ? item.recipientAccount===recipient.account : item.account===recipient.account.slice(-4)&&item.name===recipient.name
+  ))
+}
+
 
 export const savedRecipients = [
   {name:'Ahmad Rahman',bank:'Bank Muamalat',account:'12345673345'},
