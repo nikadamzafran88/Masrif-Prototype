@@ -13,6 +13,7 @@ const views = [
 export default function Root() {
   const [view, setView] = useState(startView)
   const [run, setRun] = useState(0)
+  const [preview,setPreview] = useState(false)
   const dialog = useRef(null)
   const gear = useRef(null)
   if (isEmbed) return <App/>
@@ -21,11 +22,13 @@ export default function Root() {
     dialog.current.close()
     if (next === view) return
     history.replaceState(null, '', next === 'overview' ? '/?view=overview' : '/')
+    setPreview(false)
     setView(next)
   }
   // Open one screen in the live prototype (remounts App at that path).
   function openScreen(path) {
     history.replaceState(null, '', path + '?seed=1')
+    setPreview(true)
     setRun(value => value + 1)
     setView('prototype')
   }
@@ -53,6 +56,6 @@ export default function Root() {
         </div>
       </div>
     </dialog>
-    {view === 'overview' ? <Overview open={openScreen}/> : <App key={run}/>}
+    {view === 'overview' ? <Overview open={openScreen}/> : <App key={run} preview={preview}/>}
   </>
 }

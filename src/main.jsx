@@ -4,6 +4,7 @@ import './index.css'
 import Root from './Root.jsx'
 import { isEmbed, embedScreen } from './embed.js'
 import { PublicPrivacyPage } from './PrivacyPages.jsx'
+import { signedInKey } from './demoAuth.js'
 
 const publicPath = location.pathname.replace(/\/$/,'')
 const hasPublicPage = !isEmbed && ['/privacy','/account-deletion','/support'].includes(publicPath)
@@ -15,8 +16,9 @@ if (isEmbed) {
   history.replaceState(null, '', embedScreen || '/')
 } else if (hasPublicPage || location.search === '?view=overview' || location.search === '?view=overview&') {
   // keep the overview view across refresh
-} else if (location.pathname !== '/' || location.search || location.hash || history.state) {
-  history.replaceState(null, '', '/')
+} else {
+  sessionStorage.removeItem(signedInKey)
+  if (location.pathname !== '/' || location.search || location.hash || history.state) history.replaceState(null, '', '/')
 }
 
 createRoot(document.getElementById('root')).render(

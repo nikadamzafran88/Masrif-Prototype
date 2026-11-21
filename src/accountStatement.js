@@ -4,7 +4,7 @@ const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 const firstDemoMonth='2026-11'
 const monthLabel=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'UTC'})
 
-function transactionDate(date) {
+export function transactionDate(date) {
  const match=typeof date==='string'&&date.match(/^(\d{1,2}) ([A-Za-z]{3}) (\d{4})$/)
  if(!match) return ''
  const [,day,name,year]=match
@@ -13,7 +13,7 @@ function transactionDate(date) {
  return year+'-'+String(index+1).padStart(2,'0')+'-'+day.padStart(2,'0')
 }
 
-function postedEntries(records) {
+export function postedEntries(records) {
  return records.slice().reverse().flatMap(item=>{
    const date=transactionDate(item.date)
    return !date||(item.status&&item.status!=='Successful')?[]:[{item,date}]

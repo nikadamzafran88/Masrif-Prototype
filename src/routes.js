@@ -24,12 +24,15 @@ export const accessTitles = {
  '/register/verification': 'Verification result', '/register/attention': 'Verification needs attention',
  '/register/identity-review': 'Identity review', '/register/address': 'Address',
  '/register/guardian': 'Guardian required', '/register/consent': 'Terms and consent',
+ '/register/credentials': 'Sign-in details',
  '/register/pin': 'Create PIN', '/register/biometrics': 'Enable biometrics', '/register/funding': 'Activate account', '/register/tour': 'Quick tour',
  '/register/complete': 'Registration success', '/register/pending': 'Activation pending',
  '/link-atlas': 'Link ATLAS account', '/link-atlas/pending': 'Account linking pending', '/link-atlas/confirmed': 'Atlas account linked',
  '/link-atlas/already-linked': 'Already linked', '/login': 'Sign in', '/login/welcome': 'Welcome to Masrif', '/login/locked': 'Account locked',
  '/login/identity': 'Verify your identity', '/login/recovery': 'Forgot PIN',
  '/login/recovery/code': 'Verify code', '/login/recovery/identity': 'Verify identity', '/login/recovery/pin': 'Create new PIN',
+ '/login/password': 'Sign in with password', '/login/password/verify': 'Verify mobile number',
+ '/login/password/identity': 'Verify identity', '/login/password/reset': 'Reset password', '/login/device-pin': 'Set up app PIN',
 }
 
 

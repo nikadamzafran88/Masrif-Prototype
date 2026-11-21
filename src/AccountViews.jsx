@@ -1,119 +1,351 @@
-import { useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { money, parseAmount } from './demo'
 import { Button, Icon } from './ui'
 import { Dropdown } from './Dropdown'
 import { monthlyStatement, statementMonths } from './accountStatement'
+import { buildCashFlow, buildCashFlowSummary, insightPeriods, insightRangeLabel } from './cashFlowInsights'
 
-const chartColours = ['#007f7a', '#36aaa5', '#75c7be', '#286d9c', '#9bbfce']
-const october = [
-  ['Food & groceries',70000], ['Shopping',45000], ['Bills',39000],
-  ['Transport',32000], ['Other',28000],
-]
-const sampleSpending = {
-  '2026-06':248000, '2026-07':225000, '2026-08':260000, '2026-09':232000,
-  '2026-10':october.reduce((sum,[,amount])=>sum+amount,0),
-}
-const monthFormat = new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'UTC'})
-const shortMonthFormat = new Intl.DateTimeFormat('en-GB',{month:'short',timeZone:'UTC'})
-const compactAmount = new Intl.NumberFormat('en-MY',{notation:'compact',maximumFractionDigits:1})
-const dateForMonth = value => new Date(value+'-01T00:00:00Z')
-const formatMonth = value => monthFormat.format(dateForMonth(value))
-function monthsBefore(period,offset) {
-  const date = dateForMonth(period)
-  date.setUTCMonth(date.getUTCMonth()-offset)
-  return date.toISOString().slice(0,7)
-}
+const insightModes = [['income','Income'],['expenses','Expenses']]
+const comparisonModes = [...insightModes,['comparison','Comparison']]
+const donutColours = ['var(--chart-primary)','var(--chart-mint)','var(--chart-sky)','var(--chart-gold)','var(--chart-violet)']
 
-function spendingForMonth(records,period) {
-  const {transactions} = monthlyStatement(records,period)
-  const totals = new Map()
-  const expenses = transactions.filter(row=>row.amount<0 && row.category!=='Transfers')
-  for (const row of expenses) totals.set(row.category,(totals.get(row.category) || 0)-row.amount)
-  if (transactions.length) return {
-    total:expenses.reduce((sum,row)=>sum-row.amount,0),
-    categories:[...totals].sort((a,b)=>b[1]-a[1]),
-    count:expenses.length,
-    source:'posted',
-  }
-  if (Object.hasOwn(sampleSpending,period)) return {
-    total:sampleSpending[period],categories:period==='2026-10' ? october : [],source:'sample',
-  }
-  return {total:0,categories:[],source:'empty'}
-}
-
-function SpendingTrends({records,period,go}) {
-  const [highlight,setHighlight] = useState(period)
-  const timeline = Array.from({length:6},(_,index)=>{
-    const month = monthsBefore(period,5-index)
-    return {month,...spendingForMonth(records,month)}
-  })
-  const selected = timeline.find(row=>row.month===highlight)
-  const priorMonth = monthsBefore(highlight,1)
-  const prior = spendingForMonth(records,priorMonth)
-  const comparable = selected.source!=='empty' && selected.source===prior.source
-  const difference = selected.total-prior.total
-  const highest = Math.max(1,...timeline.map(row=>row.total))
-  return <div className="spending-trends">
-    <div><h2>Spending trends</h2><p className="trends-subtitle">{formatMonth(timeline[0].month)} – {formatMonth(period)} · MYR</p></div>
-    <ul className="spending-bars" aria-label="Six months of spending">
-      {timeline.map(row=><li key={row.month}>
-        <button type="button" className="spending-column" data-source={row.source}
-          aria-pressed={row.month===highlight}
-          aria-label={formatMonth(row.month)+': '+(row.source==='empty'?'No data':money(row.total)+(row.source==='sample'?' sample':''))}
-          onClick={()=>setHighlight(row.month)}>
-          <span className="spending-column-value" aria-hidden="true">{row.source==='empty'?'—':compactAmount.format(row.total/100)}</span>
-          <span className="spending-column-bar" style={{'--bar-height':Math.max(3,row.total/highest*96)+'px'}} aria-hidden="true"/>
-          <span className="spending-column-month" aria-hidden="true">{shortMonthFormat.format(dateForMonth(row.month))}</span>
-        </button>
-      </li>)}
-    </ul>
-    <section className="spending-comparison" aria-live="polite">
-      <div className="row"><h3>{formatMonth(highlight)}</h3><small>{selected.source==='sample'?'Sample data':selected.source==='posted'?'Posted spending':'No data'}</small></div>
-      <strong className="spending-trend-total">{selected.source==='empty'?'No spending data':money(selected.total)}</strong>
-      {comparable&&<p>
-        {difference===0?'Unchanged':money(Math.abs(difference))+(difference>0?' higher':' lower')} than {formatMonth(priorMonth)}.
-        {' '}Previous total: {money(prior.total)}.
-      </p>}
-      {selected.source==='posted'&&<p>{selected.count} posted {selected.count===1?'expense':'expenses'}. The current month may still be in progress.</p>}
-    </section>
-    <p className="trends-footnote">Striped bars show historical samples. Transfers and unposted payments are excluded from posted spending.</p>
-    <Button kind="secondary" onClick={()=>go('/account/spending')}>Back to spending</Button>
+function InsightDuration({period,setPeriod,start,end}) {
+  const sheet=useRef(null)
+  const trigger=useRef(null)
+  const label=insightPeriods.find(([value])=>value===period)?.[1]
+  return <div className="insight-duration">
+    <button ref={trigger} type="button" className="insight-duration-trigger" aria-haspopup="dialog"
+      aria-label={'Select duration, '+label} onClick={()=>{
+        sheet.current.showModal()
+        sheet.current.querySelector('[aria-pressed="true"]')?.focus()
+      }}>
+      {label}<Icon name="chevron" size={15}/>
+    </button>
+    <small>{insightRangeLabel(start,end)}</small>
+    <dialog ref={sheet} className="sheet insight-duration-sheet" aria-labelledby="insight-duration-title"
+      onClose={()=>trigger.current?.focus()} onClick={event=>{if(event.target===sheet.current)sheet.current.close()}}>
+      <div className="sheet-body stack">
+        <div className="handle"/>
+        <header className="row">
+          <h2 id="insight-duration-title">Select duration</h2>
+          <button type="button" className="icon-button" aria-label="Close duration selector" onClick={()=>sheet.current.close()}><Icon name="close" size={20}/></button>
+        </header>
+        <div className="insight-duration-options" role="group" aria-label="Duration options">
+          {insightPeriods.map(([value,title])=><button type="button" key={value} aria-pressed={period===value} onClick={()=>{
+            setPeriod(value)
+            sheet.current.close()
+          }}>
+            <span aria-hidden="true"/>{title}
+          </button>)}
+        </div>
+      </div>
+    </dialog>
   </div>
 }
 
-export function SpendingView({records, onCategory, trends, go, month, setMonth}) {
-  const months = [...new Set([...statementMonths(records),...Object.keys(sampleSpending)])].sort().reverse()
-  const period = months.includes(month) ? month : months[0]
-  const spending = spendingForMonth(records,period)
-  let start = 0
-  const segments = []
-  for (const [index,[,amount]] of spending.categories.entries()) {
-    const end = start + amount/spending.total*100
-    segments.push(chartColours[index%chartColours.length]+' '+start+'% '+end+'%')
-    start = end
+function CashFlowDonut({total,categories,mode}) {
+  const isIncome=mode==='income'
+  const [selected,setSelected]=useState(-1)
+  const parts=categories.map(([label,amount],index)=>({label,amount,colour:donutColours[index]}))
+  const remainder=total-parts.reduce((sum,part)=>sum+part.amount,0)
+  if(remainder>0) parts.push({label:'Other categories',amount:remainder,colour:'var(--muted)'})
+  const selection=parts[selected]
+  let covered=0
+  const segments=[]
+  const ends=[]
+  for(const {amount,colour} of parts) {
+    const from=covered/total*100
+    covered+=amount
+    const to=covered/total*100
+    const separator=Math.min(.45,(to-from)*.12)
+    ends.push(covered/total)
+    segments.push(colour+' '+from+'% '+(to-separator)+'%', 'var(--soft) '+(to-separator)+'% '+to+'%')
   }
-  return <section className="account-tab-content">
-    <Dropdown label="Spending month" value={period} options={months.map(value=>({value,label:formatMonth(value)}))} onChange={setMonth}/>
-    {trends ? <SpendingTrends key={period} records={records} period={period} go={go}/> : <>
-      <div className="spending-donut" style={{background:segments.length?'conic-gradient('+segments.join(',')+')':undefined}}>
-        <div><small>TOTAL SPENT</small><strong>{spending.source==='empty'?'—':money(spending.total)}</strong></div>
-      </div>
-      {spending.categories.length>0&&<div className="spending-categories">
-        {spending.categories.map(([category,amount],index)=>{
-          const row = <><span className="category-dot" style={{background:chartColours[index%chartColours.length]}}/>
-            <span>{category}</span><strong>{money(amount)} · {(amount/spending.total*100).toFixed(1)}%</strong></>
-          return spending.source==='sample'
-            ? <div className="spending-sample-row" key={category}>{row}</div>
-            : <button key={category} onClick={()=>onCategory(category,period)}>{row}</button>
-        })}
-      </div>}
-      <p className="planning-note">{spending.source==='sample'
-        ? spending.categories.length?'Historical sample breakdown.':'Historical sample total. Category details aren’t available.'
-        : spending.count?'Posted demo spending. Transfers and pending payments are excluded.':'No posted spending for this month.'}</p>
-      <Button kind="secondary" onClick={()=>go('/account/spending/trends')}>View spending trends</Button>
-    </>}
+  const donutBackground=segments.length>1?'conic-gradient('+segments.join(',')+')':parts[0]?.colour||'var(--line)'
+  const totalLabel=isIncome?'Total income':'Total expenses'
+  const label=selection?.label||totalLabel
+  const amount=selection?.amount??total
+  const share=selection?Math.round(selection.amount/total*100)+'% of '+(isIncome?'income':'expenses'):''
+
+  function selectSegment(event) {
+    if(event.detail===0) {
+      setSelected(previous=>previous+1<parts.length?previous+1:-1)
+      return
+    }
+    const bounds=event.currentTarget.getBoundingClientRect()
+    const x=event.clientX-bounds.left-bounds.width/2
+    const y=event.clientY-bounds.top-bounds.height/2
+    const radius=Math.hypot(x,y)/(bounds.width/2)
+    if(radius<.75) {setSelected(-1);return}
+    if(radius>1) return
+    const angle=(Math.atan2(x,-y)/(2*Math.PI)+1)%1
+    const index=ends.findIndex(end=>angle<end)
+    setSelected(previous=>previous===index?-1:index)
+  }
+
+  return <button type="button" className="cashflow-donut" style={{background:donutBackground}} disabled={!parts.length}
+    aria-label={label+', '+money(amount)+(share?', '+share:'')+(parts.length?'. Activate to cycle through categories.':'')}
+    onClick={selectSegment}>
+    <span className="cashflow-donut-label" aria-live="polite">
+      {selection?<span className="cashflow-category-key" style={{background:selection.colour}} aria-hidden="true"/>:<Icon name={isIncome?'in':'out'} size={22}/>}
+      <small>{label}</small>
+      <strong>{money(amount)}</strong>
+      {share&&<small>{share}</small>}
+    </span>
+  </button>
+}
+
+function CashFlowCarousel({mode,setMode,children,modes=insightModes}) {
+  const scroller=useRef(null)
+  const initialIndex=useRef(modes.findIndex(([value])=>value===mode))
+  const drag=useRef(null)
+  useLayoutEffect(()=>{
+    const element=scroller.current
+    if(initialIndex.current>0) element.scrollLeft=initialIndex.current*element.clientWidth
+  },[])
+
+  function scrollToSlide(element,index) {
+    const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    element.scrollTo({left:Math.max(0,Math.min(modes.length-1,index))*element.clientWidth,behavior:reducedMotion?'instant':'smooth'})
+  }
+  function stopDrag(event) {
+    if(!drag.current) return
+    const {position,startX,moved}=drag.current
+    drag.current=null
+    if(!moved) return
+    const element=event.currentTarget
+    element.classList.remove('is-dragging')
+    const delta=event.clientX-startX
+    const target=event.type==='pointercancel'||Math.abs(delta)<45?position:position+(delta<0?1:-1)
+    scrollToSlide(element,target)
+  }
+
+  return <>
+    <div ref={scroller} className="cashflow-carousel" tabIndex={0} role="region" aria-label={modes.map(([,label])=>label).join(', ')+'. Swipe or use left and right arrow keys'}
+      onScroll={event=>{
+        const element=event.currentTarget
+        if(element.clientWidth) setMode(modes[Math.min(modes.length-1,Math.max(0,Math.round(element.scrollLeft/element.clientWidth)))][0])
+      }}
+      onKeyDown={event=>{
+        if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight') return
+        event.preventDefault()
+        const element=event.currentTarget
+        scrollToSlide(element,Math.round(element.scrollLeft/element.clientWidth)+(event.key==='ArrowRight'?1:-1))
+      }}
+      onPointerDown={event=>{
+        if(event.pointerType!=='mouse'||event.button!==0) return
+        const element=event.currentTarget
+        drag.current={startX:event.clientX,left:element.scrollLeft,position:Math.round(element.scrollLeft/element.clientWidth),moved:false}
+      }}
+      onPointerMove={event=>{
+        const current=drag.current
+        if(!current) return
+        const element=event.currentTarget
+        const movement=current.startX-event.clientX
+        if(!current.moved) {
+          if(Math.abs(movement)<6) return
+          current.moved=true
+          element.setPointerCapture(event.pointerId)
+          element.classList.add('is-dragging')
+        }
+        element.scrollLeft=current.left+movement
+      }}
+      onPointerLeave={()=>{if(!drag.current?.moved) drag.current=null}}
+      onPointerUp={stopDrag} onPointerCancel={stopDrag}>
+      {modes.map(([value,label])=><section className="cashflow-slide" key={value} data-mode={value} aria-label={label} inert={mode!==value}>
+        {children(value,label)}
+      </section>)}
+    </div>
+    <div className="cashflow-page-dots" aria-hidden="true">{modes.map(([value])=><span key={value} data-active={value===mode}/>)}</div>
+  </>
+}
+
+export function InsightsView({records,period,setPeriod,mode,setMode,onCategory,onSummary}) {
+  const {start,end,income,expenses} = buildCashFlow(records,period)
+  const isIncome=mode==='income'
+  const comparing=mode==='comparison'
+  const {categories} = isIncome?income:expenses
+
+  return <section className="account-tab-content cashflow-insights" data-mode={mode}>
+    <InsightDuration period={period} setPeriod={setPeriod} start={start} end={end}/>
+    <section className="module-panel cashflow-summary" aria-label="Income and expense breakdown">
+      <CashFlowCarousel mode={mode} setMode={setMode} modes={comparisonModes}>
+        {(value,label)=><><h2>{label}</h2>{value==='comparison'
+          ?<CashFlowComparison key={period} records={records} period={period} end={end}/>
+          :<CashFlowDonut key={period} {...(value==='income'?income:expenses)} mode={value}/>}</>}
+      </CashFlowCarousel>
+      {!comparing&&<button type="button" className="cashflow-details-link" onClick={onSummary}>View more details <Icon name="chevron" size={16}/></button>}
+    </section>
+    {!comparing&&<section className="stack cashflow-categories" aria-labelledby="cashflow-categories-title">
+      <h2 id="cashflow-categories-title">{isIncome?'Top income sources':'Top expense categories'}</h2>
+      {categories.length?categories.map(([category,amount],index)=><button type="button" className="module-row cashflow-category" key={category}
+        onClick={()=>onCategory(category,start,end,isIncome)}>
+        <span className="cashflow-category-copy"><span className="cashflow-category-key" style={{background:donutColours[index]}} aria-hidden="true"/><strong>{category}</strong><strong>{money(amount)}</strong></span>
+        <Icon name="chevron" size={16}/>
+      </button>):<p className="notice">No posted {isIncome?'income':'expenses'} in this period.</p>}
+      <p className="planning-note">{isIncome?'Income includes money received and top-ups.':'Expenses exclude outgoing transfers.'}</p>
+    </section>}
   </section>
 }
+
+const compactAmount = new Intl.NumberFormat('en-MY',{notation:'compact',maximumFractionDigits:1})
+const signedMoney = amount => (amount<0?'−':amount>0?'+':'')+money(Math.abs(amount))
+
+function CashFlowComparison({records,period,end}) {
+  const [selected,setSelected]=useState(null)
+  const income=buildCashFlowSummary(records,period,'income',0,end)
+  const expenses=buildCashFlowSummary(records,period,'expenses',0,end)
+  const groups=[]
+  income.bars.forEach((bar,index)=>{
+    const groupIndex=period==='month'?Math.floor(index/7):index
+    const group=groups[groupIndex]??={income:0,expenses:0,label:bar.label,description:bar.accessibleLabel}
+    group.income+=bar.amount
+    group.expenses+=expenses.bars[index].amount
+    if(period==='month') group.description=group.label+'–'+bar.label+' '+income.label
+  })
+  const max=Math.max(...groups.map(group=>Math.max(group.income,group.expenses)))
+  const step=max?10**Math.floor(Math.log10(max)):100
+  const scale=Math.ceil(max/step)*step||step
+  const active=groups[selected]
+  const values=active??{income:income.total,expenses:expenses.total}
+  const plotWidth=360
+  const plotHeight=108
+  const x=index=>(index+.5)*plotWidth/groups.length
+  const y=amount=>plotHeight-(amount/scale)*(plotHeight-4)
+
+  return <div className="cashflow-comparison">
+    <p className="cashflow-comparison-net"><span>Net cash flow</span><strong>{signedMoney(income.total-expenses.total)}</strong></p>
+    <div className="cashflow-comparison-chart" aria-label="Income and expenses on a shared RM scale" role="group">
+      <div className="cashflow-comparison-scale" aria-hidden="true"><span>RM {compactAmount.format(scale/100)}</span><span>RM 0</span></div>
+      <div className="cashflow-comparison-plot">
+        <svg viewBox="0 0 360 108" preserveAspectRatio="none" aria-hidden="true">
+          {[0,27,54,81,108].map(level=><line key={level} x1="0" x2={plotWidth} y1={level} y2={level} className="cashflow-comparison-gridline"/>)}
+          {insightModes.map(([series])=>{
+            const coordinates=groups.map((group,index)=>x(index)+','+y(group[series])).join(' ')
+            return <g key={series} className="cashflow-comparison-series" data-series={series}>
+              <polygon points={x(0)+','+plotHeight+' '+coordinates+' '+x(groups.length-1)+','+plotHeight}/>
+              <polyline points={coordinates}/>
+            </g>
+          })}
+          {active&&<line x1={x(selected)} x2={x(selected)} y1="0" y2={plotHeight} className="cashflow-comparison-guide"/>}
+          {active&&insightModes.map(([series])=><circle key={series} data-series={series} className="cashflow-comparison-point" cx={x(selected)} cy={y(active[series])} r="3"/>)}
+        </svg>
+        <div className="cashflow-comparison-groups" style={{gridTemplateColumns:'repeat('+groups.length+',minmax(0,1fr))'}}>
+        {groups.map((group,index)=><button type="button" key={group.description} aria-pressed={selected===index}
+          aria-label={group.description+', Income '+money(group.income)+', Expenses '+money(group.expenses)}
+          onClick={()=>setSelected(selected===index?null:index)}>
+          <span aria-hidden="true"/>
+          <span aria-hidden="true">{period==='year'?group.label.slice(0,1):group.label}</span>
+        </button>)}
+        </div>
+      </div>
+    </div>
+    <div className="cashflow-comparison-values" aria-live="polite">
+      <span><i/>Income <strong>{money(values.income)}</strong></span>
+      <span><i/>Expenses <strong>{money(values.expenses)}</strong></span>
+      {active&&<small>{active.description} · Net {signedMoney(active.income-active.expenses)}</small>}
+    </div>
+    <p className="planning-note">Expenses exclude outgoing transfers.</p>
+  </div>
+}
+
+function SummaryChart({bars,period,modeLabel,onChartDate}) {
+  const [selected,setSelected]=useState(null)
+  const gradient=useId()
+  const annual=period==='year'
+  const max=Math.max(1,...bars.map(({amount})=>amount))
+  const points=bars.map(({amount},index)=>({
+    x:annual?(index+.5)*360/bars.length:8+index*344/(bars.length-1),
+    y:176-amount/max*152,
+  }))
+  const line=points.map(({x,y},index)=>{
+    if(index===0) return 'M '+x+' '+y
+    const previous=points[index-1]
+    const mid=(previous.x+x)/2
+    return 'C '+mid+' '+previous.y+' '+mid+' '+y+' '+x+' '+y
+  }).join(' ')
+  const point=points[selected]
+  const active=bars[selected]
+  function selectPoint(index) {
+    setSelected(index)
+    onChartDate(bars[index]?.date??null)
+  }
+
+  return <div className="insight-detail-chart" role="group" aria-label={modeLabel+' by '+(annual?'month':'day')}>
+    <div className="insight-detail-plot">
+      {active&&<div className="insight-detail-tooltip" role="status" style={{left:'clamp(58px,'+(point.x/3.6)+'%,calc(100% - 58px))'}}>
+        <strong>{money(active.amount)}</strong><small>{active.accessibleLabel}</small>
+      </div>}
+      <svg viewBox="0 0 360 178" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id={gradient} x2="0" y2="1"><stop stopColor="currentColor" stopOpacity=".26"/><stop offset="100%" stopColor="currentColor" stopOpacity=".04"/></linearGradient></defs>
+        {annual?points.map(({x,y},index)=><rect key={index} x={x-4} y={Math.min(y,174)} width="8" height={Math.max(2,176-y)} rx="4" fill="currentColor" opacity={bars[index].amount?(selected===null||selected===index?1:.82):.3}/>):<>
+          <path d={line+' L 352 176 L 8 176 Z'} fill={'url(#'+gradient+')'}/>
+          <path d={line} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke"/>
+        </>}
+        {point&&<line x1={point.x} x2={point.x} y1="0" y2={point.y} stroke="currentColor" strokeOpacity=".55" strokeDasharray="4 4"/>}
+        {point&&!annual&&<circle cx={point.x} cy={point.y} r="4" fill="currentColor"/>}
+      </svg>
+      <div className="insight-detail-hitbox" style={{gridTemplateColumns:'repeat('+bars.length+',minmax(0,1fr))'}}
+        onKeyDown={event=>{
+          const direction=event.key==='ArrowLeft'?-1:event.key==='ArrowRight'?1:0
+          if(!direction) return
+          event.preventDefault()
+          event.stopPropagation()
+          const index=Math.max(0,Math.min(bars.length-1,Number(event.target.dataset.index)+direction))
+          selectPoint(index)
+          event.currentTarget.children[index].focus()
+        }}>
+        {bars.map(({accessibleLabel,amount},index)=><button key={accessibleLabel} type="button" data-index={index}
+          tabIndex={index===(selected??0)?0:-1} aria-pressed={selected===index} aria-label={accessibleLabel+', '+money(amount)}
+          onClick={()=>selectPoint(selected===index?null:index)}/>)}
+      </div>
+    </div>
+    <div className="insight-detail-axis" aria-hidden="true">
+      {bars.map(({label},index)=>(period!=='month'||index===0||index===bars.length-1||(index%6===0&&index<bars.length-3))&&
+        <span key={index} data-selected={selected===index} style={{left:(points[index].x/3.6)+'%'}}>{annual?label.slice(0,1):label}</span>)}
+    </div>
+  </div>
+}
+
+export function CashFlowSummaryView({records,period,setPeriod,mode,setMode,offset,setOffset,onCategory,onChartDate}) {
+  const summaries={
+    income:buildCashFlowSummary(records,period,'income',offset),
+    expenses:buildCashFlowSummary(records,period,'expenses',offset),
+  }
+  const {start,end,label,total,categories}=summaries[mode]
+  const isIncome=mode==='income'
+
+  return <div className="cashflow-insights insight-detail" data-mode={mode}>
+    <section className="module-panel insight-detail-panel" aria-label="Summary breakdown">
+      <div className="insight-detail-segments" role="group" aria-label="Summary duration">
+        {insightPeriods.map(([value,title])=><button type="button" key={value} aria-pressed={period===value} onClick={()=>setPeriod(value,end)}>{title.replace('This ','').replace(/^./,letter=>letter.toUpperCase())}</button>)}
+      </div>
+      <div className="insight-detail-dates">
+        <button type="button" aria-label={'Previous '+period} onClick={()=>setOffset(offset-1)}><Icon name="back" size={17}/></button>
+        <span aria-live="polite">{label}</span>
+        <button type="button" aria-label={'Next '+period} disabled={offset===0} onClick={()=>setOffset(offset+1)}><Icon name="chevron" size={17}/></button>
+      </div>
+      {offset<0&&<button type="button" className="insight-detail-today" onClick={()=>setOffset(0)}>Back to today</button>}
+      <CashFlowCarousel mode={mode} setMode={setMode}>
+        {(value,modeLabel)=><>
+          <div className="insight-detail-total"><span>{modeLabel}</span><strong>{money(summaries[value].total)}</strong></div>
+          <SummaryChart key={[period,value,start].join(':')} bars={summaries[value].bars} period={period} modeLabel={modeLabel} onChartDate={date=>onChartDate(date&&date>end?end:date)}/>
+        </>}
+      </CashFlowCarousel>
+    </section>
+    <section aria-labelledby="insight-detail-categories">
+      <h2 id="insight-detail-categories">Categories</h2>
+      {categories.length?<ul className="module-panel insight-detail-categories">
+        {categories.map(([category,amount,count],index)=><li key={category}><button type="button" onClick={()=>onCategory(category,start,end,isIncome)}>
+          <span className="insight-detail-category-icon" style={{'--category-color':donutColours[index%donutColours.length]}}><Icon name={isIncome?'in':'out'} size={18}/></span>
+          <span><strong>{category}</strong><small>{count} {count===1?'transaction':'transactions'}</small></span>
+          <span className="insight-detail-category-amount"><strong>{isIncome?'':'−'}{money(amount)}</strong><small>{Math.round(amount/total*100)}%</small></span>
+        </button></li>)}
+      </ul>:<p className="notice">No posted {isIncome?'income':'expenses'} in this period.</p>}
+    </section>
+  </div>
+}
+
 const seedGoal = {id:'laptop',name:'Laptop savings goal',target:300000,saved:120000,date:'2027-05-01'}
 const seedReminders = [
   {id:'internet',name:'Internet bill',date:'2026-11-20',amount:8900,repeat:'Monthly'},

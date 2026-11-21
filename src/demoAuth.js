@@ -7,6 +7,7 @@ export const signupDraftKey = 'masrif-session-registration'
 export const attemptsKey = 'masrif-session-pin-attempts'
 export const recoveryNoticeKey = 'masrif-session-pin-reset'
 export const signedOutKey = 'masrif-session-signed-out'
+export const signedInKey = 'masrif-session-signed-in'
 export function normalizeMalaysianMobile(value) {
   const compact = value.trim().replace(/[\s()-]/g,'')
   const national = compact.replace(/^(?:\+60|60|0)/,'')

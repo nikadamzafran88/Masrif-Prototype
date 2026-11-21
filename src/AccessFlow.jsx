@@ -2,16 +2,17 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Button, Icon } from './ui'
 import { Dropdown } from './Dropdown'
 import { isEmbed } from './embed'
-import { attemptsKey, consentKey, demoCode, demoContactKey, formatMobileDigits, lockKey, normalizeMalaysianMobile, recoveryNoticeKey, savedPinKey, signedOutKey, signupDraftKey, storedDemoPin } from './demoAuth'
+import { attemptsKey, consentKey, demoCode, demoContactKey, formatMobileDigits, lockKey, normalizeMalaysianMobile, recoveryNoticeKey, savedPinKey, signedInKey, signedOutKey, signupDraftKey, storedDemoPin } from './demoAuth'
 import { ConfirmDialog } from './ConfirmDialog'
-import { PrivacyNoticeButton } from './PrivacyPages'
+import { AtlasSupport, PrivacyNoticeButton } from './PrivacyPages'
 
 import { readDemo } from './demoStorage'
 import { addDemoAlert, biometricKey } from './profileDemo'
+import { checkDemoCredentials, createDemoCredentials, credentialKey, sampleCredentials, savedCredentials, trustedDeviceKey } from './demoCredentials'
 
 const fixedValues = {mobile:'+60 10 000 0000',name:'Farah Amin',email:'farah@example.test'}
 const firstSignInKey = 'masrif-demo-first-sign-in-pending'
-const checkpoints = new Set(['register','otp','details','mykad','selfie','verification','identity-review','address','attention','guardian','consent','pin','biometrics','funding','pending'].map(step=>step==='register'?'/register':'/register/'+step))
+const checkpoints = new Set(['register','otp','details','mykad','selfie','verification','identity-review','address','attention','guardian','consent','credentials','pin','biometrics','funding','pending'].map(step=>step==='register'?'/register':'/register/'+step))
 const states = ['Johor','Kedah','Kelantan','Melaka','Negeri Sembilan','Pahang','Penang','Perak','Perlis','Sabah','Sarawak','Selangor','Terengganu','W.P. Kuala Lumpur','W.P. Labuan','W.P. Putrajaya']
 const blankAddress = {line1:'',line2:'',postcode:'',city:'',state:''}
 const sampleAddress = {line1:'Unit 8, Jalan Contoh',line2:'',postcode:'50450',city:'Kuala Lumpur',state:'W.P. Kuala Lumpur'}
@@ -39,6 +40,8 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
  const [locked,setLocked] = useState(()=>sessionStorage.getItem(lockKey)==='true')
  const [pin,setPin] = useState(storedDemoPin)
  const [newPin,setNewPin] = useState('')
+ const [newCredentials,setNewCredentials] = useState(null)
+ const [passwordFlow,setPasswordFlow] = useState(null)
  const [newBiometric,setNewBiometric] = useState(false)
  const [language,setLanguage] = useState(()=>localStorage.getItem('masrif-language')==='ms'?'ms':'en')
  const malay = language==='ms'
@@ -47,21 +50,27 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
    localStorage.setItem('masrif-language',value)
    setLanguage(value)
  }
- const next = target => ()=>go(target)
+ const supportDialog = useRef(null)
+ const next = target => ()=>target.startsWith('/profile/help')?supportDialog.current.showModal():go(target)
  const edit = (key,value) => setValues(previous=>({...previous,[key]:value}))
  function storePin(value) {
    sessionStorage.setItem(savedPinKey,value)
    setPin(value)
  }
- function failSignIn() {
+ const credentials = savedCredentials()
+ const username = credentials?.username||sampleCredentials.username
+ const trustedDevice = sessionStorage.getItem(trustedDeviceKey)===username&&Boolean(sessionStorage.getItem(savedPinKey))
+ const passwordRequired = !trustedDevice||localStorage.getItem(firstSignInKey)==='true'
+ function failSignIn(method='PIN') {
    const count = failedAttempts+1
    setFailedAttempts(count)
    sessionStorage.setItem(attemptsKey,String(count))
    if (count >= 3) {
      sessionStorage.setItem(lockKey,'true')
      sessionStorage.setItem(signedOutKey,'true')
+     sessionStorage.removeItem(signedInKey)
      setLocked(true)
-     addDemoAlert('Security','Account locked','Three incorrect demo PIN attempts.')
+     addDemoAlert('Security','Account locked','Too many incorrect demo sign-in attempts. Last method: '+method+'.')
      go('/login/locked',true)
    }
  }
@@ -83,9 +92,18 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
      go('/register/address')
      return
    }
+   if (!isEmbed&&(!newCredentials||!newPin||!accepted||!dataConsent)) {
+     setShowDeposit(false)
+     go('/register/consent')
+     return
+   }
    sessionStorage.removeItem(signupDraftKey)
    localStorage.setItem(demoContactKey,JSON.stringify(values))
    if (newPin) storePin(newPin)
+   if (newCredentials) {
+     localStorage.setItem(credentialKey,JSON.stringify(newCredentials))
+     sessionStorage.setItem(trustedDeviceKey,newCredentials.username)
+   }
    localStorage.setItem(biometricKey,String(newBiometric))
    if (accepted&&dataConsent) {
      localStorage.setItem('masrif-demo-marketing',String(marketing))
@@ -96,18 +114,37 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
    setShowDeposit(false)
    go('/register/complete')
  }
- function complete() {
+ function complete(verifiedPassword=false) {
    if (locked) {
      go('/login/locked',true)
+     return
+   }
+   if (!verifiedPassword&&passwordRequired&&!isEmbed) {
+     go('/login/password',true)
      return
    }
    setFailedAttempts(0)
    sessionStorage.removeItem(attemptsKey)
    sessionStorage.removeItem(recoveryNoticeKey)
    sessionStorage.removeItem(signedOutKey)
+   sessionStorage.setItem(signedInKey,'true')
    setRecoveryNotice(false)
    localStorage.removeItem(firstSignInKey)
    go('/login/welcome',true,'',null)
+ }
+ function startPasswordCheck(purpose) {
+   setPasswordFlow({purpose,stage:'code'})
+   go('/login/password/verify')
+ }
+ function finishPasswordReset(record) {
+   localStorage.setItem(credentialKey,JSON.stringify(record))
+   sessionStorage.removeItem(lockKey)
+   sessionStorage.removeItem(attemptsKey)
+   setLocked(false)
+   setFailedAttempts(0)
+   setPasswordFlow(null)
+   addDemoAlert('Security','Password reset','Your demo sign-in password was reset.')
+   go('/login/password',true)
  }
  const logo = <img className="access-logo" src={'/masrif/access-logo-'+(dark?'dark':'light')+'.svg'} width="159" height="44" alt="Masrif"/>
  useEffect(()=>{
@@ -123,7 +160,7 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
 
  useEffect(()=>{
    if (isEmbed || !checkpoints.has(path)) return
-   const savedPath = ['/register/pin','/register/biometrics','/register/funding','/register/pending'].includes(path)?'/register/consent':path
+   const savedPath = ['/register/credentials','/register/pin','/register/biometrics','/register/funding','/register/pending'].includes(path)?'/register/consent':path
    sessionStorage.setItem(signupDraftKey,JSON.stringify({path:savedPath,values}))
  },[path,values])
  useEffect(()=>{
@@ -144,6 +181,7 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
    setMarketing(false)
    setVerified(false)
    setMykad('')
+   setNewCredentials(null)
    setNewPin('')
    setNewBiometric(false)
    setShowRestart(false)
@@ -181,6 +219,7 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
          if(!resume){
            setValues({...fixedValues,mobile:''})
            setMykad('')
+           setNewCredentials(null)
            go('/register')
          } else go(draft.path==='/register/consent'&&!validAddress(values.address)?'/register/address':draft.path)
        }}>{resume?copy('Resume registration','Sambung pendaftaran'):copy('Register for Masrif account','Daftar akaun Masrif')}</Button>
@@ -276,16 +315,17 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
      {shareFeedback&&<p className="notice" role="status">{shareFeedback}</p>}
      <Button kind="secondary" onClick={next('/register/details')}>Back to profile details</Button>
    </AccessStep>
-   case '/register/consent': return <AccessStep heading="Review terms and consent" footer={<Button disabled={!accepted||!dataConsent} onClick={next('/register/pin')}>Agree and continue</Button>}>
+   case '/register/consent': return <AccessStep heading="Review terms and consent" footer={<Button disabled={!accepted||!dataConsent} onClick={next('/register/credentials')}>Agree and continue</Button>}>
      <details className="module-panel"><summary>Demo terms and privacy notice</summary><p>Masrif’s prototype uses fictional information to demonstrate account setup and verification. No bank application or identity check is submitted.</p></details>
      <PrivacyNoticeButton>Read the full Privacy Notice</PrivacyNoticeButton>
      <label className="check"><input type="checkbox" checked={accepted} onChange={event=>setAccepted(event.target.checked)}/> I accept the demo Terms of Use (required)</label>
      <label className="check"><input type="checkbox" checked={dataConsent} onChange={event=>setDataConsent(event.target.checked)}/> I consent to processing the demo details (required)</label>
      <label className="check"><input type="checkbox" checked={marketing} onChange={event=>setMarketing(event.target.checked)}/> Send me offers (optional)</label>
    </AccessStep>
+   case '/register/credentials': return <PasswordStep mode="create" username={newCredentials?.username} onSuccess={record=>{setNewCredentials(record);go('/register/pin')}}/>
    case '/register/pin': return <CodeScreen key={path} create logo={logo} onHelp={next('/profile/help')} heading="Create your PIN" description="Choose a fictional six-digit PIN for this browser session." action="Continue" onSuccess={value=>{setNewPin(value);go('/register/biometrics')}}/>
    case '/register/biometrics': return <AccessStep heading="Enable biometrics" footer={<Button onClick={()=>{setNewBiometric(true);go('/register/funding')}}>Simulate biometrics</Button>}>
-     <StatusPanel icon="user" text="Preview using biometrics for future sign-ins."/>
+     <StatusPanel icon="user" text="Preview using biometrics for returning sign-in and transfer approval."/>
      <Button kind="secondary" onClick={()=>{setNewBiometric(false);go('/register/funding')}}>Skip for now</Button>
    </AccessStep>
    case '/register/funding': return <AccessStep heading="Activate your Atlas account" footer={<Button onClick={()=>setShowDeposit(true)}>Review initial deposit</Button>}>
@@ -317,16 +357,46 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
    </AccessStep>
    case '/link-atlas/confirmed': return <AccessStep heading="Atlas account linked" footer={<Button onClick={next('/login')}>Continue to sign in</Button>}><StatusPanel icon="account" text="Your demo Atlas account has been linked."/></AccessStep>
    case '/link-atlas/already-linked': return <AccessStep heading="Account already linked" footer={<Button onClick={next('/login')}>Go to sign in</Button>}><StatusPanel icon="account" text="This demo ATLAS account is already connected to Masrif."/></AccessStep>
-   case '/login': if (locked) return <AccessStep heading="Account locked" footer={<Button onClick={next('/login/recovery')}>Start PIN recovery</Button>}><StatusPanel icon="account" text="Verify your identity and reset your demo PIN to sign in again."/></AccessStep>
-     return <CodeScreen key={path} heading="Welcome back" description="Enter your passcode" logo={logo} action="Sign in" expected={pin} onIncorrect={failSignIn} onSuccess={complete}
+   case '/login': if (locked) return <AccessStep heading="Account locked" footer={<Button onClick={next('/login/recovery')}>Start PIN recovery</Button>}>
+       <StatusPanel icon="account" text="Verify your identity to recover access to your demo account."/>
+       <button className="text-button" onClick={()=>startPasswordCheck('reset')}>Forgot password?</button>
+     </AccessStep>
+     if (passwordRequired&&!isEmbed) return <PasswordStep mode="signin" logo={logo} stored={credentials} onBack={onSignInBack} onHelp={next('/profile/help')} onRegister={next('/start')} onForgot={()=>startPasswordCheck('reset')}
+       onIncorrect={()=>failSignIn('password')} onSuccess={()=>trustedDevice?complete(true):startPasswordCheck('device')}/>
+     return <CodeScreen key={path} heading="Welcome back" description="Enter your app PIN" logo={logo} action="Sign in" expected={pin} onIncorrect={failSignIn} onSuccess={()=>complete()}
      attemptsLeft={3-failedAttempts} notice={recoveryNotice?'PIN reset. Sign in with your new demo PIN.':''}
-     onBack={onSignInBack} onHelp={next('/profile/help')} onRecovery={next('/login/recovery')} onBiometric={complete}
-     footer={<Scenarios><button type="button" className="text-button" onClick={next('/login/identity')}>Secure confirmation</button><button type="button" className="text-button" onClick={next('/login/locked')}>Account locked</button><button type="button" className="text-button" onClick={next('/start')}>Register or link an account</button></Scenarios>}/>
+     onBack={onSignInBack} onHelp={next('/profile/help')} onRecovery={next('/login/recovery')} onBiometric={()=>complete()}
+     footer={<Scenarios><button type="button" className="text-button" onClick={next('/login/locked')}>Account locked</button></Scenarios>}/>
    case '/login/locked': return <AccessStep heading="Account locked" footer={<Button onClick={next('/login/recovery')}>Unlock with identity check</Button>}>
      <StatusPanel icon="account" text="Verify your identity and reset your demo PIN to unlock access."/>
      <Button kind="secondary" onClick={next('/profile/help/contact')}>Contact support</Button>
+     <button className="text-button" onClick={()=>startPasswordCheck('reset')}>Forgot password?</button>
    </AccessStep>
-   case '/login/identity': return <AccessStep heading="Confirm your identity" footer={<Button onClick={complete}>Simulate selfie check</Button>}><StatusPanel icon="user" text="Preview the additional identity check used when signing in on a new device."/></AccessStep>
+   case '/login/password': return <PasswordStep mode="signin" logo={logo} stored={credentials} locked={locked} onBack={onSignInBack} onHelp={next('/profile/help')} onRegister={next('/start')} onForgot={()=>startPasswordCheck('reset')}
+     onIncorrect={()=>failSignIn('password')} onSuccess={()=>trustedDevice?complete(true):startPasswordCheck('device')}/>
+   case '/login/password/verify': if(passwordFlow?.stage==='code') return <OtpScreen mobile={values.mobile} onHelp={next('/profile/help')} onSuccess={()=>{
+     setPasswordFlow({...passwordFlow,stage:'identity'})
+     go('/login/password/identity')
+   }}/>
+     return <AccessStep heading="Start password verification" footer={<Button onClick={next('/login/password')}>Back to sign in</Button>}/>
+   case '/login/password/identity': if(passwordFlow?.stage==='identity') return <AccessStep heading="Confirm your identity" footer={<Button onClick={()=>{
+     setPasswordFlow({...passwordFlow,stage:'finish'})
+     go(passwordFlow.purpose==='reset'?'/login/password/reset':'/login/device-pin')
+   }}>Simulate identity check</Button>}>
+     <StatusPanel icon="user" text="Complete the demo identity check before continuing."/>
+   </AccessStep>
+     return <AccessStep heading="Start password verification" footer={<Button onClick={next('/login/password')}>Back to sign in</Button>}/>
+   case '/login/password/reset': if(passwordFlow?.stage==='finish'&&passwordFlow.purpose==='reset') return <PasswordStep mode="reset" username={username} onSuccess={finishPasswordReset}/>
+     return <AccessStep heading="Verify your identity first" footer={<Button onClick={next('/login/password')}>Back to sign in</Button>}/>
+   case '/login/device-pin': if(passwordFlow?.stage==='finish'&&passwordFlow.purpose==='device') return <CodeScreen create logo={logo} onHelp={next('/profile/help')} heading="Set up your app PIN" description="Choose a fictional six-digit PIN for this browser tab." action="Continue" onSuccess={value=>{
+     storePin(value)
+     sessionStorage.setItem(trustedDeviceKey,username)
+     setPasswordFlow(null)
+     addDemoAlert('Security','Demo device registered','Password and identity verification were completed in this browser tab.')
+     complete(true)
+   }}/>
+     return <AccessStep heading="Verify your identity first" footer={<Button onClick={next('/login/password')}>Back to sign in</Button>}/>
+   case '/login/identity': return <AccessStep heading="Confirm your identity" footer={<Button onClick={next('/login')}>Return to sign in</Button>}><StatusPanel icon="user" text="Identity verification is part of setting up sign-in on a new device."/></AccessStep>
    case '/login/recovery': return <AccessStep heading="Reset your PIN" footer={<Button onClick={next('/login/recovery/code')}>Start verification</Button>}>
      <ol className="stack"><li>Verify the code sent to your registered number</li><li>Complete the demo identity check</li><li>Create a new PIN</li></ol>
    </AccessStep>
@@ -349,6 +419,15 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
  }
  }
  return <><Fragment key={path}>{renderScreen()}</Fragment>
+   <dialog ref={supportDialog} className="sheet" aria-labelledby="access-support-title">
+     <div className="sheet-body stack">
+       <div className="row">
+         <h2 id="access-support-title">Help &amp; support</h2>
+         <button type="button" className="icon-button" aria-label="Close help and support" autoFocus onClick={()=>supportDialog.current.close()}><Icon name="close"/></button>
+       </div>
+       <AtlasSupport/>
+     </div>
+   </dialog>
    {exitRequested&&checkpoints.has(path)&&<ConfirmDialog title="Leave registration?" action="Save and exit" onConfirm={saveAndExit} onCancel={onCancelExit}><p>Your place is saved in this browser tab so you can resume later.</p></ConfirmDialog>}
    {showRestart&&<ConfirmDialog title={copy('Start over?','Mula semula?')} action={copy('Discard draft','Padam draf')} cancelLabel={copy('Cancel','Batal')} onConfirm={restart} onCancel={()=>setShowRestart(false)}><p>{copy('This clears your saved registration progress in this tab.','Kemajuan pendaftaran yang disimpan dalam tab ini akan dipadamkan.')}</p></ConfirmDialog>}
    {showDeposit&&<ConfirmDialog title="Confirm demo deposit" action="Simulate deposit" onConfirm={finishRegistration} onCancel={()=>setShowDeposit(false)}><dl className="details"><dt>Amount</dt><dd>RM 0.01</dd><dt>Atlas account</dt><dd>•••• 4812</dd></dl><p>Your demo balance stays the same.</p></ConfirmDialog>}
@@ -440,8 +519,9 @@ const registrationSteps = [
  ['/register/identity-review','Review identity'],
  ['/register/address','Residential address'],
  ['/register/consent','Terms and consent'],
+ ['/register/credentials','Sign-in details'],
  ['/register/pin','Set up PIN'],
- ['/register/biometrics','Biometric login (optional)'],
+ ['/register/biometrics','Biometrics (optional)'],
  ['/register/funding','Activate account'],
 ]
 const registrationExceptions = {
@@ -492,6 +572,92 @@ function CaptureStep({selfie=false,heading,text,action,onClick,tips,prompts}) {
    </div>
  </AccessStep>
 }
+function RegisterPrompt({onRegister}) {
+ return <div className="access-signin-link">
+   <span>Don’t have an account?</span>
+   <button type="button" className="text-button" onClick={onRegister}>Register Masrif</button>
+ </div>
+}
+
+function PasswordStep({mode,username:initialUsername='',stored,locked,logo,onBack,onHelp,onRegister,onForgot,onIncorrect,onSuccess}) {
+ const signin=mode==='signin'
+ const resetting=mode==='reset'
+ const name=signin?stored?.username||'':initialUsername
+ const [username,setUsername]=useState(name)
+ const [password,setPassword]=useState('')
+ const [confirmation,setConfirmation]=useState('')
+ const [visible,setVisible]=useState(false)
+ const [error,setError]=useState('')
+ const [busy,setBusy]=useState(false)
+ const pending=useRef(false)
+ const submitLabel=signin?'Sign in':resetting?'Save new password':'Continue'
+ async function submit(event) {
+   event.preventDefault()
+   if(pending.current||locked) return
+   const form=event.currentTarget
+   setError('')
+   if(!signin) {
+     if(!/^[a-z0-9._-]{4,40}$/i.test(username.trim())) {setError('Use 4–40 letters, numbers, dots, hyphens or underscores for your username.');return}
+     if(password.length<15) {setError('Use at least 15 characters for your demo password.');return}
+     if(password!==confirmation) {setError('The passwords don’t match.');return}
+   }
+   pending.current=true
+   setBusy(true)
+   try {
+     if(signin) {
+       const valid=await checkDemoCredentials(username,password,stored)
+       if(!form.isConnected) return
+       if(valid) onSuccess()
+       else {setError('The username or password is incorrect. Try again.');onIncorrect()}
+     } else {
+       const record=await createDemoCredentials(username,password)
+       if(form.isConnected) onSuccess(record)
+     }
+   } catch {
+     if(form.isConnected) setError('Couldn’t verify the demo credentials. Try again in a secure browser window.')
+   } finally {
+     pending.current=false
+     if(form.isConnected) setBusy(false)
+   }
+ }
+ return <AccessStep className={signin?'password-signin':''} heading={signin?undefined:resetting?'Choose a new password':'Create your sign-in details'}
+   footer={!signin&&<Button form="masrif-password-form" type="submit" disabled={busy||locked}>{busy?'Please wait…':submitLabel}</Button>}>
+   {signin?<><SignInHeader logo={logo} onBack={onBack} onHelp={onHelp}/>
+     <div className="password-signin-hero">
+       <h1>Sign in to your <span>Masrif account</span></h1><p>Enter your demo username and password.</p>
+     </div>
+   </>:<p>Use fictional credentials for this demo.</p>}
+   <form id="masrif-password-form" className="module-panel registration-form-card" onSubmit={submit}>
+     <label>Username<input autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={40} required readOnly={resetting}
+       value={username} onChange={event=>{setUsername(event.target.value);setError('')}}/></label>
+     <div className="password-field">
+       <label htmlFor="masrif-password">{resetting?'New password':'Password'}</label>
+       <div className="password-field-control">
+         <input id="masrif-password" type={visible?'text':'password'} autoComplete={signin?'current-password':'new-password'}
+           maxLength={128} required value={password} onChange={event=>{setPassword(event.target.value);setError('')}}/>
+         <button type="button" className="icon-button" aria-label={visible?'Hide password':'Show password'} aria-controls="masrif-password" onClick={()=>setVisible(value=>!value)}><Icon name={visible?'eyeOff':'eye'} size={20}/></button>
+       </div>
+     </div>
+     {onForgot&&<button type="button" className="text-button password-forgot" onClick={onForgot}>Forgot password?</button>}
+     {!signin&&<><small>Use at least 15 characters.</small>
+       <label>Confirm password<input type="password" autoComplete="new-password" maxLength={128} required
+         value={confirmation} onChange={event=>{setConfirmation(event.target.value);setError('')}}/></label></>}
+     {locked&&<p className="notice passcode-error" role="alert">Your demo account is locked. Reset your password to continue.</p>}
+     {error&&<p className="notice passcode-error" role="alert">{error}</p>}
+     {signin&&!stored&&<section className="password-demo" aria-label="Demo sign-in details">
+       <h2>Demo account</h2>
+       <dl>
+         <dt>Username</dt><dd>{sampleCredentials.username}</dd>
+         <dt>Password</dt><dd>{sampleCredentials.password}</dd>
+       </dl>
+       <button type="button" className="text-button password-sample" onClick={()=>{setUsername(sampleCredentials.username);setPassword(sampleCredentials.password);setError('')}}>Use sample credentials</button>
+     </section>}
+     {signin&&<Button type="submit" disabled={busy||locked}>{busy?'Please wait…':submitLabel}</Button>}
+     {onRegister&&<RegisterPrompt onRegister={onRegister}/>}
+   </form>
+ </AccessStep>
+}
+
 function RegistrationAddress({address,onChange,onContinue}) {
  const [attempted,setAttempted] = useState(false)
  const error = attempted&&!validAddress(address)
@@ -611,11 +777,20 @@ function OtpScreen({mobile,onSuccess,onChangeNumber,onHelp}) {
    <div className="access-actions"><Button disabled={expired||digits.length!==6}>Verify</Button></div>
  </form>
 }
+function SignInHeader({logo,onBack,onHelp}) {
+ return <div className="passcode-header">
+   {onBack&&<button type="button" className="icon-button passcode-back" aria-label="Back" onClick={onBack}><Icon name="back" size={20}/></button>}
+   {logo}
+   {onHelp&&<button type="button" className="icon-button" aria-label="Get sign-in help" onClick={onHelp}><Icon name="help" size={20}/></button>}
+ </div>
+}
+
 function CodeScreen({heading,description,action,onSuccess,onIncorrect,expected=demoCode,create,logo,onBack,onHelp,onRecovery,onBiometric,footer,attemptsLeft,notice}) {
  const [digits,setDigits] = useState('')
  const [firstPin,setFirstPin] = useState('')
  const [error,setError] = useState('')
- const [showBiometricNotice,setShowBiometricNotice] = useState(false)
+ const [biometricPrompt,setBiometricPrompt] = useState(false)
+ const [biometricNotice,setBiometricNotice] = useState(false)
  const confirming = Boolean(firstPin)
  function verify(value) {
    if(value.length!==6) return
@@ -634,23 +809,20 @@ function CodeScreen({heading,description,action,onSuccess,onIncorrect,expected=d
    setDigits(value)
    if(!create&&key!=='Del'&&digits.length===5) verify(value)
  }
- return <form className="access-step access-code" onSubmit={event=>{event.preventDefault();if(create)verify(digits)}} onKeyDown={event=>{
+ return <><form className="access-step access-code" onSubmit={event=>{event.preventDefault();if(create)verify(digits)}} onKeyDown={event=>{
    if (!/^\d$/.test(event.key) && event.key!=='Backspace') return
    event.preventDefault()
    press(event.key==='Backspace'?'Del':event.key)
  }}>
    <div className="access-content">
-     <div className="passcode-header">
-       {onBack&&<button type="button" className="icon-button passcode-back" aria-label="Back" onClick={onBack}><Icon name="back" size={20}/></button>}
-       {logo}
-       <button type="button" className="icon-button" aria-label="Get sign-in help" onClick={onHelp}><Icon name="help" size={20}/></button>
-     </div>
+     <SignInHeader logo={logo} onBack={onBack} onHelp={onHelp}/>
      <div className="passcode-prompt">
        <h2>{confirming?'Confirm your PIN':heading}</h2>
        <p>{confirming?'Re-enter your new six-digit PIN.':description}</p>
      </div>
      <div className="access-code-dots" role="group" aria-label={digits.length+' of 6 digits entered'}>{Array.from({length:6},(_,i)=><span key={i} aria-hidden="true" data-filled={i<digits.length}/>)}</div>
      {notice&&<p className="notice" role="status">{notice}</p>}
+     {biometricNotice&&<p className="notice" role="status">Face ID is off. Sign in with your PIN, then enable biometrics in Profile → Security.</p>}
      {error&&<p className="notice passcode-error" role="alert">{error}{!create&&attemptsLeft>0?' '+attemptsLeft+' '+(attemptsLeft===1?'attempt':'attempts')+' remaining.':''}</p>}
      {onRecovery&&<button type="button" className="text-button" onClick={onRecovery}>Forgot passcode?</button>}
      {!create&&<small>Demo PIN: {expected}</small>}
@@ -660,19 +832,23 @@ function CodeScreen({heading,description,action,onSuccess,onIncorrect,expected=d
      <div className="keypad access-keypad" role="group" aria-label="Demo keypad">
        {'123456789'.split('').map(digit=><button type="button" key={digit} onClick={()=>press(digit)}>{digit}</button>)}
        {onBiometric?<button type="button" aria-label="Use Face ID (demo)" onClick={()=>{
-         if(localStorage.getItem(biometricKey)==='true') onBiometric()
-         else setShowBiometricNotice(true)
+         if(localStorage.getItem(biometricKey)==='true') setBiometricPrompt(true)
+         else setBiometricNotice(true)
        }}><Icon name="face" size={23}/></button>:<span aria-hidden="true"/>}
        <button type="button" onClick={()=>press('0')}>0</button>
        <button type="button" aria-label="Delete digit" onClick={()=>press('Del')}><Icon name="backspace" size={23}/></button>
      </div>
      {create&&<Button disabled={digits.length!==6}>{confirming?'Confirm PIN':action}</Button>}
    </div>
-   {showBiometricNotice&&<ConfirmDialog title="Face ID is off" action="Use passcode" cancelLabel="Close"
-     onConfirm={()=>setShowBiometricNotice(false)} onCancel={()=>setShowBiometricNotice(false)}>
-     <p>Sign in with your passcode, then turn on Biometric login under Profile → Security.</p>
-   </ConfirmDialog>}
  </form>
+ {biometricPrompt&&<ConfirmDialog title="Sign in with Face ID" action="Simulate Face ID" onCancel={()=>setBiometricPrompt(false)} onConfirm={()=>{
+   setBiometricPrompt(false)
+   if(localStorage.getItem(biometricKey)==='true') onBiometric()
+   else setBiometricNotice(true)
+ }}>
+   <p>Preview biometric sign-in for this demo account.</p>
+ </ConfirmDialog>}
+ </>
 }
 
 // Demo-only shortcuts to alternate outcomes, kept out of the main path.

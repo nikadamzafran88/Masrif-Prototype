@@ -9,10 +9,11 @@ import { AddMoney } from './AddMoney'
 import { Zakat } from './Zakat'
 import { AddCard, CardViews } from './CardViews'
 import { AccessFlow, RegistrationProgress } from './AccessFlow'
-import { attemptsKey, demoContactKey, lockKey, nameInitials, recoveryNoticeKey, signedOutKey, signupDraftKey } from './demoAuth'
+import { attemptsKey, demoContactKey, lockKey, nameInitials, recoveryNoticeKey, signedInKey, signedOutKey, signupDraftKey } from './demoAuth'
 import { Inbox, ProfileMenu, ProfilePage } from './ProfileViews'
-import { PlanningView, SpendingView } from './AccountViews'
-import { monthlyStatement } from './accountStatement'
+import { CashFlowSummaryView, InsightsView, PlanningView } from './AccountViews'
+import { monthlyStatement, postedEntries } from './accountStatement'
+import { insightOffsetForDate, insightRangeLabel, isInsightDate, isSpending } from './cashFlowInsights'
 import { transferHeading, extraTitles, profileLinks, profileDetailTitles, accessTitles } from './routes'
 import { isEmbed, seedDraft } from './embed'
 import { StatusBar } from './StatusBar'
@@ -27,6 +28,7 @@ const accountServices = [
     ['View receipts','/account/receipts','receipt'],
   ]},
   {label:'Account management', actions:[
+    ['Planning','/account/planning','calculator'],
     ['Card','/account/card','card'],
     ['Profile','/profile','user'],
   ]},
@@ -42,25 +44,35 @@ function revealTargets(container) {
 }
 const accountTabs = [
   ['Overview', '/account'],
-  ['Spending', '/account/spending'],
-  ['Planning', '/account/planning'],
+  ['Insights', '/account/insights'],
 ]
 const accountTabIndex = path => accountTabs.findIndex(([, target]) =>
-  target === path || (target === '/account/spending' && path === '/account/spending/trends')
+  target === path || (target==='/account/insights'&&(
+    (path.startsWith('/account/insights/')&&path!==insightSummaryPath)||path==='/account/spending'||path==='/account/spending/trends'
+  ))
 )
+const insightSummaryPath = '/account/insights/summary'
 const titles = {'/account':'Account','/account/transactions':'Transactions','/pay':'Pay & receive','/modules':'Features','/profile':'Profile','/inbox':'Inbox','/inbox/welcome':'Welcome to Masrif','/account/add':'Add money','/account/statement':'Account statement','/account/receipts':'Receipts','/account/card':'Card','/account/card/details':'Card details','/profile/cards/details':'Card details','/profile/cards/add':'Add card',...extraTitles,...Object.fromEntries(profileLinks.map(([label,slug])=>['/profile/'+slug,label])),...Object.fromEntries(Object.entries(profileDetailTitles).map(([slug,label])=>['/profile/'+slug,label]))}
 const bankKey = 'masrif-records'
 const currentPath = () => location.pathname
-function accessRedirect(target) {
-  if (isEmbed || Object.hasOwn(accessTitles,target) || target==='/profile/help' || target.startsWith('/profile/help/')) return target
-  if (sessionStorage.getItem(lockKey)==='true') return '/login/locked'
-  return sessionStorage.getItem(signedOutKey)==='true'?'/login':target
+function canUseApp() {
+  return sessionStorage.getItem(signedInKey)==='true'&&sessionStorage.getItem(signedOutKey)!=='true'&&sessionStorage.getItem(lockKey)!=='true'
 }
-function spendingScope(search) {
+function accessRedirect(target,preview) {
+  if (preview || (target!=='/login/welcome'&&Object.hasOwn(accessTitles,target))) return target
+  if (sessionStorage.getItem(lockKey)==='true') return '/login/locked'
+  return canUseApp()?target:'/login'
+}
+function insightsScope(search) {
   const params = new URLSearchParams(search)
   const month = params.get('month')
   const category = params.get('category')
-  return month && /^\d{4}-(0[1-9]|1[0-2])$/.test(month) && category ? {month,category} : null
+  const start = params.get('start')
+  const end = params.get('end')
+  const income = params.get('direction')==='in'
+  if (!category) return null
+  if (isInsightDate(start)&&isInsightDate(end)&&start<=end) return {start,end,category,income}
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(month||'') ? {month,category,income} : null
 }
 function readRecords() {
   try { return JSON.parse(localStorage.getItem(bankKey)) || seed } catch { return seed }
@@ -73,7 +85,8 @@ function RecordRows({items, open}) {
   </button>)}</div> : <p className="notice">No matching transactions.</p>
 }
 
-export default function App() {
+export default function App({preview=false}) {
+  const isPreview=preview||isEmbed
   const [path,setPath] = useState(currentPath)
   const [navigationMotion,setNavigationMotion] = useState()
   const [records,setRecords] = useState(readRecords)
@@ -95,9 +108,13 @@ export default function App() {
   }
   const [query,setQuery] = useState('')
   const [filter,setFilter] = useState('All')
-  const [spendingMonth,setSpendingMonth] = useState('')
-  const [transactionScope,setTransactionScope] = useState(()=>spendingScope(location.search))
-  const spendingTrends = path==='/account/spending/trends'
+  const [insightPeriod,setInsightPeriod] = useState('month')
+  const [summaryPeriod,setSummaryPeriod] = useState('month')
+  const [summaryMode,setSummaryMode] = useState('income')
+  const [summaryOffset,setSummaryOffset] = useState(0)
+  const [summaryAnchor,setSummaryAnchor] = useState(null)
+  const [insightMode,setInsightMode] = useState(()=>path.startsWith('/account/spending')?'expenses':'income')
+  const [transactionScope,setTransactionScope] = useState(()=>insightsScope(location.search))
   const tabIndex = accountTabIndex(path)
   const accountTab = accountTabs[tabIndex]?.[0]
   const sheet = useRef(null)
@@ -117,13 +134,13 @@ export default function App() {
   useEffect(()=>{
     const pop = ()=>{
       const current = currentPath()
-      const target = accessRedirect(current)
+      const target = accessRedirect(current,isPreview)
       if (target!==current) history.replaceState(history.state,'',target)
       const nextIndex = history.state?.masrifIndex ?? 0
       const back = nextIndex < historyIndex.current
       historyIndex.current = nextIndex
       if (target === route.current) return
-      if (target === '/account/transactions') setTransactionScope(spendingScope(location.search))
+      if (target === '/account/transactions') setTransactionScope(insightsScope(location.search))
       scrollPositions.current.set(route.current, (accountViewport.current ?? viewport.current).scrollTop)
       nextScroll.current = scrollPositions.current.get(target) ?? 0
       const fromAccount = accountTabIndex(route.current)
@@ -141,7 +158,7 @@ export default function App() {
     }
     window.addEventListener('popstate',pop)
     return ()=>window.removeEventListener('popstate',pop)
-  },[])
+  },[isPreview])
   useEffect(()=>{localStorage.setItem(bankKey,JSON.stringify(records))},[records])
   useLayoutEffect(()=>{
     const scrollContainer = accountViewport.current ?? viewport.current
@@ -184,10 +201,10 @@ export default function App() {
     }
   },[path,navigationMotion])
   function go(target, replace=false, search='', direction='slide-left') {
-    const allowed = accessRedirect(target)
+    const allowed = accessRedirect(target,isPreview)
     if (allowed!==target) {target=allowed;search=''}
     if(target===path) return
-    if (target === '/account/transactions') setTransactionScope(spendingScope(search))
+    if (target === '/account/transactions') setTransactionScope(insightsScope(search))
     scrollPositions.current.set(path, (accountViewport.current ?? viewport.current).scrollTop)
     nextScroll.current = 0
     if (!replace) historyIndex.current += 1
@@ -205,6 +222,7 @@ export default function App() {
   }
   function back() {
     if(history.state?.from) history.back()
+    else if(path===insightSummaryPath) go('/account/insights',true,'','slide-right')
     else go(Object.hasOwn(accessTitles,path)?'/welcome':path.startsWith('/transfer')?'/transfer/bank':path==='/account/card/details'?'/account/card':path.startsWith('/account/')?'/account':path.startsWith('/profile/')?path.slice(0,path.lastIndexOf('/')):path.startsWith('/inbox/')?'/inbox':path.startsWith('/pay/')?'/pay':path.startsWith('/modules/')?'/modules':'/home',true,'','slide-right')
   }
   function newTransfer(recipient) {
@@ -226,6 +244,11 @@ export default function App() {
   }
   const updateDraft = next=>setDraft({...next,id:draft.id || crypto.randomUUID()})
   const showRecord = item=>go('/account/transactions/'+item.id)
+  function showInsightCategory(category,start,end,income) {
+    setQuery('')
+    setFilter(income?'Money in':'Money out')
+    go('/account/transactions',false,'?'+new URLSearchParams({category,start,end,direction:income?'in':'out'}))
+  }
   const paymentResult = path.startsWith('/pay/result/')
   const result = paymentResult || path.startsWith('/transfer/result/')
   const receipt = path.startsWith('/receipts/')
@@ -243,7 +266,7 @@ export default function App() {
   const profilePath = path.slice('/profile/'.length)
   const profileSection = path.startsWith('/profile/')&&!profilePath.startsWith('cards')&&(Object.hasOwn(profileDetailTitles,profilePath)||profileLinks.some(([,slug])=>slug===profilePath))?profilePath:null
   const inbox = path==='/inbox'||path.startsWith('/inbox/')
-  const title = result?(paymentResult?'Payment result':'Transfer result'):receipt?'Receipt':detail?'Transaction details':transfer?transferHeading(step):accountView?'Your account':accessTitles[path] || titles[path] || (inbox?'Notification':'Masrif')
+  const title = result?(paymentResult?'Payment result':'Transfer result'):receipt?'Receipt':detail?'Transaction details':transfer?transferHeading(step):accountView?'Your account':path===insightSummaryPath?'Summary':accessTitles[path] || titles[path] || (inbox?'Notification':'Masrif')
   const active = paymentResult||((transfer||result)&&draft.origin==='/pay')?'pay':transfer||result||receipt?'account':home?'home':path.split('/')[1]
   function selectNav(slug) {
     const from = navIndex(active)
@@ -251,12 +274,14 @@ export default function App() {
     go('/'+slug,false,'',slug==='pay' ? 'pay-up' : from===to ? 'slide-right' : slideBetween(from,to))
   }
   const posted = records.filter(row=>!row.status || row.status==='Successful')
-  const scopedStatement = path==='/account/transactions' && transactionScope ? monthlyStatement(records,transactionScope.month) : null
-  const transactionRows = scopedStatement
-    ? scopedStatement.transactions.filter(row=>row.amount<0&&row.category===transactionScope.category).reverse()
+  const scope = path==='/account/transactions'?transactionScope:null
+  const legacyStatement = scope?.month ? monthlyStatement(records,scope.month) : null
+  const scopedLabel = scope&&(legacyStatement?.label||insightRangeLabel(scope.start,scope.end))
+  const transactionRows = scope
+    ? (legacyStatement?.transactions||postedEntries(records).filter(({date})=>date>=scope.start&&date<=scope.end).map(({item})=>item))
+      .filter(row=>(scope.income?row.amount>0:isSpending(row))&&(row.category||'Other')===scope.category).reverse()
     : records
   const zakat = path === '/modules/zakat'
-  const periodTotal = direction=>posted.filter(row=>direction*row.amount>0).reduce((sum,row)=>sum+Math.abs(row.amount),0)
   return <div className="demo-stage">
     <aside className="demo-intro" aria-labelledby="demo-title">
       <h2 id="demo-title"><img className="demo-brand" src="/masrif/access-logo-dark.svg" width="159" height="44" alt="Masrif"/></h2>
@@ -280,7 +305,7 @@ export default function App() {
       <div className="hero">
       <div className="hero-content"><div className="home-balance"><small>ATLAS by Bank Muamalat</small><span className="balance-number">{hidden?'RM ••••••':money(balance)}</span><div className="home-account-visibility"><small>Account 0000 0000 4812</small><BalanceToggle hidden={hidden} toggle={()=>setHidden(!hidden)}/></div></div></div>
       </div>
-    </> : (path==='/'||path==='/welcome'||path==='/login'||path==='/login/welcome')?null:<header className={'page-header '+(top?'hub':'')+(companionHome && compactHeader?' compact':'')}>{!top&&<button className="icon-button" aria-label="Back" onClick={back}><Icon name="back"/></button>}{companionHome&&compactHeader&&companionSummary?<div className="companion-compact-prayer" aria-label="Muslim Companion, next prayer">
+    </> : (path==='/'||path==='/welcome'||path==='/login'||path==='/login/password'||path==='/login/welcome')?null:<header className={'page-header '+(top?'hub':'')+(companionHome && compactHeader?' compact':'')}>{!top&&<button className="icon-button" aria-label="Back" onClick={back}><Icon name="back"/></button>}{companionHome&&compactHeader&&companionSummary?<div className="companion-compact-prayer" aria-label="Muslim Companion, next prayer">
       <span><b>{companionSummary.name}</b> <strong>{companionSummary.time}</strong></span>
       <small>In {companionSummary.countdown}</small>
       <small className="companion-compact-location">{companionSummary.location}</small>
@@ -339,28 +364,39 @@ export default function App() {
         </div>
       </dialog>
 
-      <section aria-label="Money in and out"><div className="two">{[['Money in','in',1],['Money out','out',-1]].map(([label,icon,direction])=><div className="metric" key={label}><img src={'/masrif/money-'+icon+'.svg'} width="32" height="32" alt=""/><small>{label} · Nov 2026</small><strong>{hidden?"RM ••••":money(periodTotal(direction))}</strong></div>)}</div></section><section><h2>Recent transactions</h2><button className="history-link" onClick={()=>{setQuery('');setFilter('All');go('/account/transactions')}}>View all transactions <Icon name="arrow" size={16}/></button><RecordRows items={records.slice(0,3)} open={showRecord}/></section></>}
-      {accountTab==='Spending'&&<SpendingView records={posted} trends={spendingTrends} go={go} month={spendingMonth} setMonth={setSpendingMonth}
-        onCategory={(category,month)=>{
-          setQuery('')
-          setFilter('Money out')
-          go('/account/transactions',false,'?'+new URLSearchParams({category,month}))
+      <section><h2>Recent transactions</h2><button className="history-link" onClick={()=>{setQuery('');setFilter('All');go('/account/transactions')}}>View all transactions <Icon name="arrow" size={16}/></button><RecordRows items={records.slice(0,3)} open={showRecord}/></section></>}
+      {accountTab==='Insights'&&<InsightsView records={records} period={insightPeriod} setPeriod={setInsightPeriod} mode={insightMode} setMode={setInsightMode}
+        onCategory={showInsightCategory} onSummary={()=>{
+          setSummaryPeriod(insightPeriod)
+          setSummaryMode(insightMode)
+          setSummaryOffset(0)
+          setSummaryAnchor(null)
+          go(insightSummaryPath)
         }}/>}
-      {accountTab==='Planning'&&<PlanningView records={posted}/>}
       </div>
       </div>
     </>}
+    {path==='/account/planning'&&<PlanningView records={posted}/>}
+    {path===insightSummaryPath&&<CashFlowSummaryView records={records} period={summaryPeriod} mode={summaryMode} setMode={setSummaryMode}
+      offset={summaryOffset} setOffset={value=>{setSummaryOffset(value);setSummaryAnchor(null)}} onCategory={showInsightCategory}
+      onChartDate={setSummaryAnchor} setPeriod={(value,fallbackDate)=>{
+        if(value===summaryPeriod) return
+        const date=summaryAnchor??fallbackDate
+        setSummaryPeriod(value)
+        setSummaryOffset(insightOffsetForDate(value,date))
+        setSummaryAnchor(date)
+      }}/>}
     {path==='/account/transactions'&&<div className="stack transaction-history">
-      {scopedStatement&&<p className="notice">{transactionScope.category} · {scopedStatement.label}</p>}
+      {scope&&<p className="notice">{scope.category} · {scopedLabel}</p>}
       <input aria-label="Search transactions" type="search" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search transactions"/>
-      {!scopedStatement&&<div className="segments transaction-filters">{['All','Money in','Money out'].map(label=><button key={label} aria-pressed={filter===label} onClick={()=>setFilter(label)}>{label}</button>)}</div>}
+      {!scope&&<div className="segments transaction-filters">{['All','Money in','Money out'].map(label=><button key={label} aria-pressed={filter===label} onClick={()=>setFilter(label)}>{label}</button>)}</div>}
       <button className="text-button" onClick={()=>{
         setQuery('')
         setFilter('All')
         setTransactionScope(null)
-        if (scopedStatement) history.replaceState(history.state,'',path)
+        if (scope) history.replaceState(history.state,'',path)
       }}>Reset filters</button>
-      <RecordRows items={transactionRows.filter(row=>(scopedStatement||filter==='All'||(filter==='Money in'?row.amount>0:row.amount<0))&&[row.name,row.category,row.reference,row.id].join(' ').toLowerCase().includes(query.toLowerCase().trim()))} open={showRecord}/>
+      <RecordRows items={transactionRows.filter(row=>(scope||filter==='All'||(filter==='Money in'?row.amount>0:row.amount<0))&&[row.name,row.category,row.reference,row.id].join(' ').toLowerCase().includes(query.toLowerCase().trim()))} open={showRecord}/>
     </div>}
     {transfer&&<Transfer key={step} step={step} draft={draft} setDraft={updateDraft} go={go} balance={balance} records={records} submit={submit}/>}
     {receipt&&item&&(!item.status||item.status==='Successful')&&<><Receipt item={item}/><Button kind="secondary" onClick={back}>Done</Button></>}
@@ -382,10 +418,10 @@ export default function App() {
       setFilter('All')
       submitted.current=null
       for(const key of ['masrif-highlight','masrif-recent','masrif-demo-prayer-city']) sessionStorage.removeItem(key)
-      for(const key of ['masrif-plan','masrif-planning-budgets','masrif-planning-goals','masrif-planning-reminders','masrif-appearance','masrif-language','masrif-reading','masrif-reading-number','masrif-bookmark','masrif-demo-biometrics','masrif-demo-programmes','masrif-demo-marketing','masrif-demo-recipients','masrif-demo-pintar-applications','masrif-demo-procurement','masrif-demo-personal-contact','masrif-demo-support-tickets','masrif-demo-alerts','masrif-demo-marketing-history','masrif-demo-consent','masrif-demo-device-removed']) localStorage.removeItem(key)
+      for(const key of ['masrif-plan','masrif-planning-budgets','masrif-planning-goals','masrif-planning-reminders','masrif-appearance','masrif-language','masrif-reading','masrif-reading-number','masrif-bookmark','masrif-demo-biometrics','masrif-demo-programmes','masrif-demo-marketing','masrif-demo-recipients','masrif-demo-pintar-applications','masrif-demo-procurement','masrif-demo-personal-contact','masrif-demo-support-tickets','masrif-demo-alerts','masrif-demo-marketing-history','masrif-demo-consent','masrif-demo-device-removed','masrif-demo-credentials']) localStorage.removeItem(key)
       sessionStorage.removeItem('masrif-session-demo-pin')
       sessionStorage.removeItem('masrif-session-demo-lock')
-      for(const key of [signupDraftKey,attemptsKey,recoveryNoticeKey,signedOutKey]) sessionStorage.removeItem(key)
+      for(const key of [signupDraftKey,attemptsKey,recoveryNoticeKey,signedOutKey,'masrif-session-trusted-device']) sessionStorage.removeItem(key)
       setDraft({})
       go('/home')
     }}/>}
@@ -410,7 +446,7 @@ export default function App() {
     {!zakat&&!access&&!home&&!transfer&&!result&&!receipt&&!detail&&path!=='/account'&&path!=='/account/transactions'&&path!=='/profile'&&!profileSection&&!path.startsWith('/inbox')&&!path.startsWith('/account/')&&path!=='/profile/cards'&&!path.startsWith('/profile/cards/')&&<Extras key={path} path={path} dark={dark} onCompanionSummary={setCompanionSummary} go={go} balance={balance} newTransfer={newTransfer} onPayment={(id,amount,status,name='Campus Bookshop')=>{setRecords(previous=>settle(previous,{id,name,amount:-amount,category:name==='Campus Bookshop'?'Education':'Payments',date:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),status}));go('/pay/result/'+id,true)}}/>}
     </main>
     </div>
-    {!access&&(!transfer || step!=='authorise')&&!result&&<nav className="footer" aria-label="Main navigation">{tabs.map(([label,icon,slug=label.toLowerCase()])=>{return <button key={label} className={(slug==='pay'?'pay-tab ':'')+(active===slug?'selected':'')} aria-current={active===slug?'page':undefined} onClick={()=>selectNav(slug)}><span>{slug==='pay'?<img src="/masrif/pay-tab.svg" width="48" height="48" alt=""/>:<Icon name={icon}/>}</span>{label}</button>})}</nav>}
+    {!access&&(isPreview||canUseApp())&&(!transfer || step!=='authorise')&&!result&&<nav className="footer" aria-label="Main navigation">{tabs.map(([label,icon,slug=label.toLowerCase()])=>{return <button key={label} className={(slug==='pay'?'pay-tab ':'')+(active===slug?'selected':'')} aria-current={active===slug?'page':undefined} onClick={()=>selectNav(slug)}><span>{slug==='pay'?<img src="/masrif/pay-tab.svg" width="48" height="48" alt=""/>:<Icon name={icon}/>}</span>{label}</button>})}</nav>}
     </div>
     <span className="phone-button action" aria-hidden="true"/><span className="phone-button vol-up" aria-hidden="true"/><span className="phone-button vol-down" aria-hidden="true"/><span className="phone-button power" aria-hidden="true"/>
     </div>

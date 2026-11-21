@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, Icon } from './ui'
 import { profileLinks } from './routes'
 import { ChangeDemoPin, DemoLegal, PersonalDetails, SupportDesk } from './ProfileWorkflows'
-import { demoContactKey, lockKey, nameInitials, signedOutKey } from './demoAuth'
+import { demoContactKey, lockKey, nameInitials, signedInKey, signedOutKey } from './demoAuth'
 import { alertsKey, addDemoAlert, biometricKey, setMarketingPreference } from './profileDemo'
 import { readDemo } from './demoStorage'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -46,7 +46,7 @@ export function ProfileMenu({go}) {
    <div className="profile-card"><span className="avatar" aria-hidden="true">{nameInitials(name)}</span><div><h2>{name}</h2><p>Atlas ••4812</p></div></div>
    {profileLinks.map(([label,slug])=><ProfileRow title={label} key={slug} onClick={()=>go('/profile/'+slug)}/>)}
    <button className="button logout-row" onClick={()=>setConfirmLogout(true)}>Log out</button>
-   {confirmLogout&&<ConfirmDialog title="Log out of Masrif?" action="Log out" onConfirm={()=>{sessionStorage.setItem(signedOutKey,'true');go('/login',true)}} onCancel={()=>setConfirmLogout(false)}><p>You’ll need to sign in again to continue.</p></ConfirmDialog>}
+   {confirmLogout&&<ConfirmDialog title="Log out of Masrif?" action="Log out" onConfirm={()=>{sessionStorage.removeItem(signedInKey);sessionStorage.setItem(signedOutKey,'true');go('/login',true)}} onCancel={()=>setConfirmLogout(false)}><p>You’ll need to sign in again to continue.</p></ConfirmDialog>}
  </section>
 }
 
@@ -75,7 +75,7 @@ export function ProfilePage({section,go,appearance,applyAppearance,records,reset
  if(section==='settings/language') return <section className="stack"><ProfileRow title="English" trailing={<small>Current</small>}/><small>English is available in this demo.</small></section>
  if(section==='security') return <section className="stack">
   <ProfileRow title="Change PIN" onClick={open('security/pin')}/>
-  <Preference name="Biometric login" storageKey={biometricKey} onChange={enabled=>addDemoAlert("Security","Biometric sign-in updated",enabled?"Demo biometrics enabled.":"Demo biometrics disabled.")}/>
+  <Preference name="Biometric sign-in and approval" storageKey={biometricKey} onChange={enabled=>addDemoAlert('Security','Biometric settings updated',enabled?'Demo biometrics enabled.':'Demo biometrics disabled.')}/>
   <ProfileRow title="Bound devices" detail="Review devices linked to this demo" onClick={open('devices')}/>
   <ProfileRow title="Security alerts" trailing={<small>Always on</small>}/>
   <p className="notice">Demo security changes appear in your inbox.</p>
@@ -123,7 +123,7 @@ export function ProfilePage({section,go,appearance,applyAppearance,records,reset
  </section>
  return <section className="stack">
   <div className="module-panel"><h2>Lock your demo account?</h2><p>You’ll need to complete the demo PIN recovery flow to sign in again.</p></div>
-  <Button onClick={()=>{sessionStorage.setItem(lockKey,'true');sessionStorage.setItem(signedOutKey,'true');addDemoAlert('Security','Account locked','You locked your demo account.');go('/login/locked',true)}}>Confirm demo lock</Button>
+  <Button onClick={()=>{sessionStorage.setItem(lockKey,'true');sessionStorage.removeItem(signedInKey);sessionStorage.setItem(signedOutKey,'true');addDemoAlert('Security','Account locked','You locked your demo account.');go('/login/locked',true)}}>Confirm demo lock</Button>
   <Button kind="secondary" onClick={open('help/report')}>Cancel</Button>
  </section>
 }
