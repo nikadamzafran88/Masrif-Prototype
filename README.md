@@ -1,6 +1,6 @@
-# masrifprototype
+# skeb-pro-prototype
 
-Interactive web prototype of the Masrif app (powered by Atlas from Bank Muamalat). No real money moves.
+Interactive web prototype of the SKEB-Pro app (powered by Atlas from Bank Muamalat). No real money moves.
 
 Built with React and Vite. It has two views, switched from the settings icon at the top right:
 
@@ -31,7 +31,7 @@ The web prototype provides these public routes without sign-in.
 | Route | Prototype behavior |
 | --- | --- |
 | `/privacy` | Describes browser storage, optional permissions, external content requests and privacy choices. |
-| `/account-deletion` | Confirms and clears Masrif demo data for the current browser profile and tab. It also provides the published ATLAS contact options for real accounts. |
+| `/account-deletion` | Confirms and clears SKEB-Pro demo data for the current browser profile and tab. It also provides the published ATLAS contact options for real accounts. |
 | `/support` | Provides ATLAS customer care contact options. |
 
 The in-app route is **Profile ? App settings ? Delete account**. It checks the current demo PIN before opening the final confirmation. **Reset demo account** remains available under Demo controls for starting over with sample data.
@@ -39,6 +39,6 @@ The in-app route is **Profile ? App settings ? Delete account**. It checks the c
 ### Before submitting a live banking build
 
 - Connect in-app and external deletion to a bank-approved service that verifies identity, accepts deletion requests, removes eligible records and explains retention and processing timelines. Confirm how a linked ATLAS account is handled.
-- Publish the approved Masrif privacy policy and live support and deletion URLs. Review notices and native permissions against the release build's actual data collection, sharing, retention and consent practices. Replace the prototype routes in listings when the live pages are ready.
+- Publish the approved SKEB-Pro privacy policy and live support and deletion URLs. Review notices and native permissions against the release build's actual data collection, sharing, retention and consent practices. Replace the prototype routes in listings when the live pages are ready.
 - Replace simulated PIN, Face ID, recovery and device removal with production authentication, secure storage and session revocation.
 - Complete Apple App Privacy and Google Play Data safety and Financial features declarations in the applicable publisher accounts. Provide working review access and instructions. Check the final iOS build for required-reason APIs and applicable SDK manifests. Confirm the login-services requirement if any third-party login is added.

@@ -21,7 +21,7 @@ export function FlowStep({title,children,back,backLabel='Back'}) {
 
 export function DemoDocument({label,onComplete,onCancel}) {
   const [phase,setPhase] = useState('choose')
-  const fileName = 'masrif-sample-'+label.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.pdf'
+  const fileName = 'skeb-pro-sample-'+label.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.pdf'
   useEffect(()=>{
     if (phase!=='sending') return
     const timer=setTimeout(()=>setPhase('done'),650)

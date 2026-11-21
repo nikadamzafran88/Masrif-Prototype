@@ -41,7 +41,7 @@ export const screenGroups = [
   ]),
   t('Features', [
     ['/modules', 'Features'], ['/modules/zakat', 'Zakat'], ['/modules/pintar', 'Pintar'],
-    ['/modules/e-procurement', 'e-Procurement'], ['/modules/companion', 'Muslim Companion'],
+    ['/modules/e-procurement', 'e-SKEB'], ['/modules/companion', 'Muslim Companion'],
     ['/modules/companion/prayer-times', 'Prayer times'], ['/modules/companion/quran', 'Al-Quran'],
     ['/modules/companion/duas', 'Duas'], ['/modules/companion/tasbih', 'Tasbih'],
     ['/modules/companion/qibla', 'Qibla'], ['/modules/companion/mosques', 'Mosques'],

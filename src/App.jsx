@@ -52,7 +52,7 @@ const accountTabIndex = path => accountTabs.findIndex(([, target]) =>
   ))
 )
 const insightSummaryPath = '/account/insights/summary'
-const titles = {'/account':'Account','/account/transactions':'Transactions','/pay':'Pay & receive','/modules':'Features','/profile':'Profile','/inbox':'Inbox','/inbox/welcome':'Welcome to Masrif','/account/add':'Add money','/account/statement':'Account statement','/account/receipts':'Receipts','/account/card':'Card','/account/card/details':'Card details','/profile/cards/details':'Card details','/profile/cards/add':'Add card',...extraTitles,...Object.fromEntries(profileLinks.map(([label,slug])=>['/profile/'+slug,label])),...Object.fromEntries(Object.entries(profileDetailTitles).map(([slug,label])=>['/profile/'+slug,label]))}
+const titles = {'/account':'Account','/account/transactions':'Transactions','/pay':'Pay & receive','/modules':'Features','/profile':'Profile','/inbox':'Inbox','/inbox/welcome':'Welcome to SKEB-Pro','/account/add':'Add money','/account/statement':'Account statement','/account/receipts':'Receipts','/account/card':'Card','/account/card/details':'Card details','/profile/cards/details':'Card details','/profile/cards/add':'Add card',...extraTitles,...Object.fromEntries(profileLinks.map(([label,slug])=>['/profile/'+slug,label])),...Object.fromEntries(Object.entries(profileDetailTitles).map(([slug,label])=>['/profile/'+slug,label]))}
 const bankKey = 'masrif-records'
 const currentPath = () => location.pathname
 function canUseApp() {
@@ -266,7 +266,7 @@ export default function App({preview=false}) {
   const profilePath = path.slice('/profile/'.length)
   const profileSection = path.startsWith('/profile/')&&!profilePath.startsWith('cards')&&(Object.hasOwn(profileDetailTitles,profilePath)||profileLinks.some(([,slug])=>slug===profilePath))?profilePath:null
   const inbox = path==='/inbox'||path.startsWith('/inbox/')
-  const title = result?(paymentResult?'Payment result':'Transfer result'):receipt?'Receipt':detail?'Transaction details':transfer?transferHeading(step):accountView?'Your account':path===insightSummaryPath?'Summary':accessTitles[path] || titles[path] || (inbox?'Notification':'Masrif')
+  const title = result?(paymentResult?'Payment result':'Transfer result'):receipt?'Receipt':detail?'Transaction details':transfer?transferHeading(step):accountView?'Your account':path===insightSummaryPath?'Summary':accessTitles[path] || titles[path] || (inbox?'Notification':'SKEB-Pro')
   const active = paymentResult||((transfer||result)&&draft.origin==='/pay')?'pay':transfer||result||receipt?'account':home?'home':path.split('/')[1]
   function selectNav(slug) {
     const from = navIndex(active)
@@ -284,7 +284,7 @@ export default function App({preview=false}) {
   const zakat = path === '/modules/zakat'
   return <div className="demo-stage">
     <aside className="demo-intro" aria-labelledby="demo-title">
-      <h2 id="demo-title"><img className="demo-brand" src="/masrif/access-logo-dark.svg" width="159" height="44" alt="Masrif"/></h2>
+      <h2 id="demo-title"><img className="demo-brand" src="/brand/logo-dark.png" width="159" height="38" alt="SKEB-Pro"/></h2>
       <p className="demo-attribution">Powered by Atlas from Bank Muamalat</p>
       <p className="demo-intro-note">Interactive prototype · No real money moves</p>
     </aside>
@@ -325,7 +325,7 @@ export default function App({preview=false}) {
         <button className="explore-card highlight-slide" onClick={()=>go('/modules/pintar')}><Icon name="book"/><strong>Pintar</strong><small>Discover education programmes</small></button>
         <button className="explore-card highlight-slide" onClick={()=>go('/modules/zakat')}><Icon name="heart"/><strong>Zakat</strong><small>Explore giving services</small></button>
       </div></section>
-      <section><div className="row"><h2>Explore Masrif</h2><button className="text-button" onClick={()=>go('/modules')}>View all <Icon name="arrow" size={16}/></button></div><div className="explore">{[['Pintar','Education services','book','pintar'],['e-Procurement','Supplier services','grid','e-procurement'],['Zakat','Giving services','heart','zakat']].map(([label,description,icon,target])=><button className="explore-card" key={label} onClick={()=>go('/modules/'+target)}><span className="tile-icon"><Icon name={icon}/></span><strong>{label}</strong><small>{description}</small></button>)}</div></section>
+      <section><div className="row"><h2>Explore SKEB-Pro</h2><button className="text-button" onClick={()=>go('/modules')}>View all <Icon name="arrow" size={16}/></button></div><div className="explore">{[['Pintar','Education services','book','pintar'],['e-SKEB','e-procurement services','grid','e-procurement'],['Zakat','Giving services','heart','zakat']].map(([label,description,icon,target])=><button className="explore-card" key={label} onClick={()=>go('/modules/'+target)}><span className="tile-icon"><Icon name={icon}/></span><strong>{label}</strong><small>{description}</small></button>)}</div></section>
       <HomeUpdates/>
       <p className="demo-label"><span/>Interactive demo · No real money moves</p>
     </>}
@@ -463,7 +463,7 @@ function HomeUpdates() {
          <div className="home-update-phone-tiles"><i/><i/><i/><i/></div>
        </div>)}
      </div>
-     <div className="home-update-copy"><h3>2 Services, 1 Subscription</h3><p>Get the latest version of the Masrif app!</p></div>
+     <div className="home-update-copy"><h3>2 Services, 1 Subscription</h3><p>Get the latest version of the SKEB-Pro app!</p></div>
    </article>
  </section>
 }

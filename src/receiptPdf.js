@@ -1,11 +1,11 @@
-﻿import { PDFDocument, StandardFonts, LineCapStyle, rgb } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { receiptBrand, receiptDetails, receiptLogo, receiptNotice } from './receiptData'
 
-const teal=rgb(.03,.36,.35)
-const ink=rgb(.1,.2,.18)
-const muted=rgb(.34,.44,.42)
-const line=rgb(.88,.91,.91)
-const surface=rgb(.92,.97,.95)
+const teal=rgb(.043,.141,.431)
+const ink=rgb(.059,.09,.165)
+const muted=rgb(.278,.333,.412)
+const line=rgb(.886,.91,.941)
+const surface=rgb(.902,.945,1)
 const width=390
 const margin=24
 
@@ -24,25 +24,14 @@ export function wrap(text,font,size,maxWidth) {
  return result.length?result:['']
 }
 
-export function drawLogo(page,svg,y,pageWidth=width) {
- const box=svg.match(/viewBox="([^"]+)"/)?.[1].split(' ').map(Number)
- if(!box||box.length!==4) throw new Error('Invalid receipt logo')
- const [left,top,w]=box
- const paths=[...svg.matchAll(/<path\s+([^>]+)>/g)]
- if(!paths.length) throw new Error('Receipt logo has no artwork')
- for(const [,attributes] of paths){
-   const path=attributes.match(/\bd="([^"]+)"/)?.[1]
-   if(!path) continue
-   const stroke=attributes.match(/stroke-width="([^"]+)"/)?.[1]
-   page.drawSvgPath(path,{
-     x:(pageWidth-w)/2-left,y:y+top,
-     ...(stroke?{borderColor:teal,borderWidth:Number(stroke),borderLineCap:LineCapStyle.Round}:{color:teal}),
-   })
- }
+export function drawLogo(page,logo,top,pageWidth=width) {
+ const w=150,h=w*logo.height/logo.width
+ page.drawImage(logo,{x:(pageWidth-w)/2,y:top-h,width:w,height:h})
 }
 
-export async function makeReceiptPdf(item,svg) {
+export async function makeReceiptPdf(item,logoBytes) {
  const pdf=await PDFDocument.create()
+ const logo=await pdf.embedPng(logoBytes)
  const regular=await pdf.embedFont(StandardFonts.Helvetica)
  const bold=await pdf.embedFont(StandardFonts.HelveticaBold)
  const info=receiptDetails(item)
@@ -64,8 +53,8 @@ export async function makeReceiptPdf(item,svg) {
  function center(value,y,size,font=regular,color=ink) {
    page.drawText(value,{x:(width-font.widthOfTextAtSize(value,size))/2,y,size,font,color})
  }
- pdf.setTitle('Masrif Receipt '+item.id)
- drawLogo(page,svg,height-34)
+ pdf.setTitle('SKEB-Pro Receipt '+item.id)
+ drawLogo(page,logo,height-34)
  center(receiptBrand,height-92,11,regular,teal)
  center('Transaction receipt',height-126,20,bold)
  page.drawRectangle({x:margin,y:height-227,width:width-margin*2,height:82,color:surface})
@@ -95,7 +84,7 @@ async function drawUnicodeValue(pdf,page,canvas,lines,top) {
  const context=canvas.getContext('2d')
  context.scale(3,3)
  context.font='bold 11px Arial'
- context.fillStyle='#19332e'
+ context.fillStyle='#0f172a'
  context.textAlign='right'
  context.textBaseline='top'
  lines.forEach((text,i)=>context.fillText(text,196,i*14))
@@ -105,8 +94,8 @@ async function drawUnicodeValue(pdf,page,canvas,lines,top) {
 
 export async function loadBrandLogo() {
  const response=await fetch(receiptLogo)
- if(!response.ok) throw new Error('Could not load the Masrif logo')
- return response.text()
+ if(!response.ok) throw new Error('Could not load the SKEB-Pro logo')
+ return response.arrayBuffer()
 }
 
 export function savePdf(bytes,filename) {
@@ -122,5 +111,5 @@ export function savePdf(bytes,filename) {
 
 export async function downloadReceipt(item) {
  const bytes=await makeReceiptPdf(item,await loadBrandLogo())
- savePdf(bytes,'masrif-receipt-'+String(item.id).replace(/[^a-zA-Z0-9_-]/g,'-')+'.pdf')
+ savePdf(bytes,'skeb-pro-receipt-'+String(item.id).replace(/[^a-zA-Z0-9_-]/g,'-')+'.pdf')
 }

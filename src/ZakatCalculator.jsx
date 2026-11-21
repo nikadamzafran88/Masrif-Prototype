@@ -35,7 +35,7 @@ export function ZakatCalculator({draft, onBack, onPay}) {
         </label>)}
         {!validCounts&&<p role="alert">Enter a whole number for each category.</p>}
       </> : <>
-        <p>Use {authority}’s official calculator to confirm the nisab and total allowed deductions for your assessment year. Masrif applies 2.5% to eligible yearly income at or above that threshold.</p>
+        <p>Use {authority}’s official calculator to confirm the nisab and total allowed deductions for your assessment year. SKEB-Pro applies 2.5% to eligible yearly income at or above that threshold.</p>
         <label>Total annual income (RM)<input inputMode="decimal" value={income} onChange={event=>setIncome(event.target.value)} placeholder="0.00"/></label>
         <label>Annual deductions allowed by {authority} (RM)<input inputMode="decimal" value={deductions} onChange={event=>setDeductions(event.target.value)} placeholder="0.00"/></label>
         <label>Official nisab for the assessment year (RM)<input inputMode="decimal" value={nisab} onChange={event=>setNisab(event.target.value)} placeholder="Enter the official threshold"/></label>

@@ -19,7 +19,7 @@ const statuses = {
 const empty = {supplier:null,entries:{}}
 const companyExample = {company:'Contoh Supplies Sdn. Bhd.',registration:'DEMO-00125',email:'supplier@example.test'}
 
-export function Procurement() {
+export function Procurement({dark=false}) {
   const [data,setData] = useState(()=>readDemo(storageKey,empty))
   const [page,setPage] = useState('home')
   const [id,setId] = useState('')
@@ -53,7 +53,7 @@ export function Procurement() {
   const discover = open('discover')
 
   if (page==='home') return <div className="module-flow">
-    <div className="module-panel"><h2>Supplier procurement</h2><p>Find opportunities, submit proposals and track delivery and payment.</p></div>
+    <div className="module-panel eskeb-panel"><img className="eskeb-logo" src={'/brand/eskeb-'+(dark?'dark':'light')+'.png'} width="230" height="56" alt="e-SKEB"/><h2>e-procurement services</h2><p>Find opportunities, submit proposals and track delivery and payment.</p></div>
     <Button onClick={discover}>Discover tenders</Button>
     <FlowRow title="My tenders" detail={Object.keys(data.entries).length+' joined'} onClick={open('my-tenders')}/>
     <FlowRow title="Supplier registration" detail={data.supplier?.company || 'Register a demo company'} onClick={()=>{setId('');setPage('companies')}}/>

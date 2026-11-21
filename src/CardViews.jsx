@@ -134,7 +134,7 @@ export function CardViews({details, openDetails, done}) {
         }}>
       {cards.map(item=><div className="card-slide" key={item.id}>
         <article className="atlas-debit-card" data-card={isVirtual(item) ? 'virtual' : 'physical'} aria-label={item.label+' ending '+item.last}>
-          <img className="card-face-logo" src="/masrif/access-logo-light.svg" alt="Masrif"/>
+          <img className="card-face-logo" src="/brand/logo-light.png" alt="SKEB-Pro"/>
           <div className="card-face-chip" aria-hidden="true"/>
           <div className="card-face-brand"><strong>ATLAS</strong><small>Bank Muamalat</small></div>
           <div className="card-face-footer"><small>{item.holder ?? cardholder}</small><span className="card-face-number">•••• {item.last}</span></div>

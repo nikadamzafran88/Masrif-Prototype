@@ -77,10 +77,10 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
  async function shareApp() {
    const url = new URL('/',location.origin).href
    try {
-     if (navigator.share) await navigator.share({title:'Masrif',url})
+     if (navigator.share) await navigator.share({title:'SKEB-Pro',url})
      else {
        await navigator.clipboard.writeText(url)
-       setShareFeedback('Masrif app link copied.')
+       setShareFeedback('SKEB-Pro app link copied.')
      }
    } catch (error) {
      if (error.name!=='AbortError') setShareFeedback('Share this link with your guardian: '+url)
@@ -146,11 +146,11 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
    addDemoAlert('Security','Password reset','Your demo sign-in password was reset.')
    go('/login/password',true)
  }
- const logo = <img className="access-logo" src={'/masrif/access-logo-'+(dark?'dark':'light')+'.svg'} width="159" height="44" alt="Masrif"/>
+ const logo = <img className="access-logo" src={'/brand/logo-'+(dark?'dark':'light')+'.png'} width="159" height="38" alt="SKEB-Pro"/>
  useEffect(()=>{
    if(isEmbed) return // overview frames stay on their screen
    if(path==='/login/welcome') {
-     const timer=setTimeout(()=>go('/home',true,'',null),1600)
+     const timer=setTimeout(()=>go('/home',true,'',null),2300)
      return ()=>clearTimeout(timer)
    }
    if(path!=='/') return
@@ -190,10 +190,10 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
  function renderScreen() {
  switch(path) {
    case '/':
-   case '/login/welcome': return <section className="signed-in-splash" aria-label={path==='/' ? 'Opening Masrif' : 'Welcome to Masrif'}>
+   case '/login/welcome': return <section className="signed-in-splash" aria-label={path==='/' ? 'Opening SKEB-Pro' : 'Welcome to SKEB-Pro'}>
      <div className="signed-in-brand">
-       <img className="signed-in-logo" src="/masrif/access-logo-light.svg" width="159" height="44" alt="Masrif"/>
-       {path==='/login/welcome'&&<h1>{firstSignIn?'Welcome to Masrif':'Welcome back'}, {(readDemo(demoContactKey,fixedValues).name||fixedValues.name).trim().split(/\s+/)[0]}</h1>}
+       <img className="signed-in-logo" src="/brand/logo-light.png" width="159" height="38" alt="SKEB-Pro"/>
+       {path==='/login/welcome'&&<h1>{firstSignIn?'Welcome to SKEB-Pro':'Welcome back'}, {(readDemo(demoContactKey,fixedValues).name||fixedValues.name).trim().split(/\s+/)[0]}</h1>}
      </div>
      <div className="signed-in-attribution"><small>Powered by</small><strong>Atlas from Bank Muamalat</strong></div>
    </section>
@@ -203,7 +203,7 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
    </AccessStep>
    case '/welcome': return <AccessStep lang={language} className="access-welcome" footer={<>
      <Button kind="secondary" onClick={next('/login')}>{copy('Sign in','Log masuk')}</Button>
-     <Button onClick={next('/start')}>{copy('Register Masrif','Daftar Masrif')}</Button>
+     <Button onClick={next('/start')}>{copy('Register SKEB-Pro','Daftar SKEB-Pro')}</Button>
    </>}>
      <LanguageToggle value={language} onChange={changeLanguage}/>
      <WelcomeCarousel logo={logo} language={language}/>
@@ -222,7 +222,7 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
            setNewCredentials(null)
            go('/register')
          } else go(draft.path==='/register/consent'&&!validAddress(values.address)?'/register/address':draft.path)
-       }}>{resume?copy('Resume registration','Sambung pendaftaran'):copy('Register for Masrif account','Daftar akaun Masrif')}</Button>
+       }}>{resume?copy('Resume registration','Sambung pendaftaran'):copy('Register for SKEB-Pro account','Daftar akaun SKEB-Pro')}</Button>
      </>}>
        <h2>{copy('How would you like to start?','Bagaimanakah anda ingin bermula?')}</h2>
        {resume&&<section className="module-panel registration-draft">
@@ -311,12 +311,12 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
      <p>Some verification details need your attention.</p><div className="module-panel"><h2>What happens next</h2><p>Review the requested information and submit it again. This preview does not perform a real identity check.</p></div>
    </AccessStep>
    case '/register/guardian': return <AccessStep heading="A guardian needs to register" footer={<Button onClick={shareApp}>Share app link</Button>}>
-     <StatusPanel icon="user" text="Ask a parent or guardian to open Masrif and review the registration flow."/>
+     <StatusPanel icon="user" text="Ask a parent or guardian to open SKEB-Pro and review the registration flow."/>
      {shareFeedback&&<p className="notice" role="status">{shareFeedback}</p>}
      <Button kind="secondary" onClick={next('/register/details')}>Back to profile details</Button>
    </AccessStep>
    case '/register/consent': return <AccessStep heading="Review terms and consent" footer={<Button disabled={!accepted||!dataConsent} onClick={next('/register/credentials')}>Agree and continue</Button>}>
-     <details className="module-panel"><summary>Demo terms and privacy notice</summary><p>Masrif’s prototype uses fictional information to demonstrate account setup and verification. No bank application or identity check is submitted.</p></details>
+     <details className="module-panel"><summary>Demo terms and privacy notice</summary><p>SKEB-Pro’s prototype uses fictional information to demonstrate account setup and verification. No bank application or identity check is submitted.</p></details>
      <PrivacyNoticeButton>Read the full Privacy Notice</PrivacyNoticeButton>
      <label className="check"><input type="checkbox" checked={accepted} onChange={event=>setAccepted(event.target.checked)}/> I accept the demo Terms of Use (required)</label>
      <label className="check"><input type="checkbox" checked={dataConsent} onChange={event=>setDataConsent(event.target.checked)}/> I consent to processing the demo details (required)</label>
@@ -334,14 +334,14 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
      <p className="notice">No money will move and the demo balance stays the same.</p>
    </AccessStep>
    case '/register/complete': return <AccessStep heading="Registration successful" footer={<Button onClick={next('/login')}>Continue to sign in</Button>}>
-     <StatusPanel icon="user" text="Your demo Masrif account is ready."/>
-     <dl className="details"><dt>Masrif ID</dt><dd>MSR-000125</dd><dt>Device</dt><dd>This device</dd><dt>Linked account</dt><dd>Atlas •••• 4812</dd></dl>
+     <StatusPanel icon="user" text="Your demo SKEB-Pro account is ready."/>
+     <dl className="details"><dt>SKEB-Pro ID</dt><dd>SKB-000125</dd><dt>Device</dt><dd>This device</dd><dt>Linked account</dt><dd>Atlas •••• 4812</dd></dl>
      <Button kind="secondary" onClick={next('/register/tour')}>Take a quick tour</Button>
    </AccessStep>
-   case '/register/tour': return <AccessStep heading="Explore Masrif" footer={<Button onClick={next('/login')}>Continue to sign in</Button>}>
+   case '/register/tour': return <AccessStep heading="Explore SKEB-Pro" footer={<Button onClick={next('/login')}>Continue to sign in</Button>}>
      <div className="module-panel"><h3>Account</h3><p>See your balance, spending, statements, and planning tools.</p></div>
      <div className="module-panel"><h3>Pay &amp; Receive</h3><p>Try a demo transfer, scan a QR code, or view receiving details.</p></div>
-     <div className="module-panel"><h3>Features</h3><p>Explore Zakat, Pintar, e-Procurement, and Muslim Companion.</p></div>
+     <div className="module-panel"><h3>Features</h3><p>Explore Zakat, Pintar, e-SKEB, and Muslim Companion.</p></div>
    </AccessStep>
    case '/register/pending': return <AccessStep heading="Activation pending" footer={<Button onClick={next('/register/identity-review')}>Resume account setup</Button>}><StatusPanel icon="account" text="Finish reviewing your details and setting up your PIN before activating the demo account."/></AccessStep>
    case '/link-atlas': return <AccessStep heading="Link your ATLAS account" footer={<Button disabled={link.account.length!==12||link.mykad.length!==12} onClick={next('/link-atlas/pending')}>Link demo account</Button>}>
@@ -356,7 +356,7 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
      <div className="module-panel"><h3>What happens next</h3><p>Resume linking to check the result. You can continue with the same account details.</p></div>
    </AccessStep>
    case '/link-atlas/confirmed': return <AccessStep heading="Atlas account linked" footer={<Button onClick={next('/login')}>Continue to sign in</Button>}><StatusPanel icon="account" text="Your demo Atlas account has been linked."/></AccessStep>
-   case '/link-atlas/already-linked': return <AccessStep heading="Account already linked" footer={<Button onClick={next('/login')}>Go to sign in</Button>}><StatusPanel icon="account" text="This demo ATLAS account is already connected to Masrif."/></AccessStep>
+   case '/link-atlas/already-linked': return <AccessStep heading="Account already linked" footer={<Button onClick={next('/login')}>Go to sign in</Button>}><StatusPanel icon="account" text="This demo ATLAS account is already connected to SKEB-Pro."/></AccessStep>
    case '/login': if (locked) return <AccessStep heading="Account locked" footer={<Button onClick={next('/login/recovery')}>Start PIN recovery</Button>}>
        <StatusPanel icon="account" text="Verify your identity to recover access to your demo account."/>
        <button className="text-button" onClick={()=>startPasswordCheck('reset')}>Forgot password?</button>
@@ -436,8 +436,8 @@ export function AccessFlow({path,go,dark,exitRequested,onCancelExit,onSignInBack
 
 const welcomeSlides = [
   {
-    en:['Pay zakat, join programmes and bank in one app','Your Atlas account from Bank Muamalat, with Masrif services.'],
-    ms:['Bayar zakat, sertai program dan urus perbankan dalam satu aplikasi','Akaun Atlas anda daripada Bank Muamalat, dengan perkhidmatan Masrif.'],
+    en:['Pay zakat, join programmes and bank in one app','Your Atlas account from Bank Muamalat, with SKEB-Pro services.'],
+    ms:['Bayar zakat, sertai program dan urus perbankan dalam satu aplikasi','Akaun Atlas anda daripada Bank Muamalat, dengan perkhidmatan SKEB-Pro.'],
   },
   {
     icon:'card',
@@ -457,7 +457,7 @@ function WelcomeCarousel({logo,language}) {
  const {icon,[language]:[title,description]} = welcomeSlides[active]
  const malay = language==='ms'
  const direction = change => setActive(current=>Math.max(0,Math.min(welcomeSlides.length-1,current+change)))
- return <section className="welcome-carousel" aria-label={malay?'Pengenalan Masrif':'Introduction to Masrif'}>
+ return <section className="welcome-carousel" aria-label={malay?'Pengenalan SKEB-Pro':'Introduction to SKEB-Pro'}>
    <div className="welcome-slide" aria-live="polite" onTouchStart={event=>{
      const {clientX,clientY} = event.touches[0]
      start.current = {clientX,clientY}
@@ -575,7 +575,7 @@ function CaptureStep({selfie=false,heading,text,action,onClick,tips,prompts}) {
 function RegisterPrompt({onRegister}) {
  return <div className="access-signin-link">
    <span>Don’t have an account?</span>
-   <button type="button" className="text-button" onClick={onRegister}>Register Masrif</button>
+   <button type="button" className="text-button" onClick={onRegister}>Register SKEB-Pro</button>
  </div>
 }
 
@@ -624,7 +624,7 @@ function PasswordStep({mode,username:initialUsername='',stored,locked,logo,onBac
    footer={!signin&&<Button form="masrif-password-form" type="submit" disabled={busy||locked}>{busy?'Please wait…':submitLabel}</Button>}>
    {signin?<><SignInHeader logo={logo} onBack={onBack} onHelp={onHelp}/>
      <div className="password-signin-hero">
-       <h1>Sign in to your <span>Masrif account</span></h1><p>Enter your demo username and password.</p>
+       <h1>Sign in to your <span>SKEB-Pro account</span></h1><p>Enter your demo username and password.</p>
      </div>
    </>:<p>Use fictional credentials for this demo.</p>}
    <form id="masrif-password-form" className="module-panel registration-form-card" onSubmit={submit}>

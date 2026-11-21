@@ -1,6 +1,6 @@
-﻿import { money } from './demo'
+import { money } from './demo'
 
-export const receiptLogo = '/masrif/access-logo-light.svg'
+export const receiptLogo = '/brand/logo-light.png'
 export const receiptBrand = 'by ATLAS Bank Muamalat'
 export const receiptNotice = 'Demo receipt. No money moved.'
 

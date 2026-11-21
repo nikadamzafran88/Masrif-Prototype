@@ -38,7 +38,7 @@ export function Pintar({dark}) {
     setPage('tracker')
   }
   function saveSession() {
-    const event = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Masrif//Pintar Demo//EN','BEGIN:VEVENT',
+    const event = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SKEB-Pro//Pintar Demo//EN','BEGIN:VEVENT',
       'UID:pintar-demo-20261122@masrif.example','DTSTAMP:20261119T000000Z','DTSTART:20261122T010000Z',
       'DTEND:20261122T030000Z','SUMMARY:Pintar STEM session (demo)','END:VEVENT','END:VCALENDAR'].join('\r\n')
     const url = URL.createObjectURL(new Blob([event],{type:'text/calendar'}))

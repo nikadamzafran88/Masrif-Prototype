@@ -1,4 +1,4 @@
-﻿import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { money } from './demo'
 import { receiptBrand } from './receiptData'
 import { drawLogo, loadBrandLogo, savePdf, wrap } from './receiptPdf'
@@ -6,25 +6,26 @@ import { drawLogo, loadBrandLogo, savePdf, wrap } from './receiptPdf'
 const width=595.28
 const height=841.89
 const margin=44
-const ink=rgb(.1,.2,.18)
-const teal=rgb(.03,.36,.35)
-const muted=rgb(.34,.44,.42)
-const line=rgb(.88,.91,.91)
-const surface=rgb(.92,.97,.95)
+const ink=rgb(.059,.09,.165)
+const teal=rgb(.043,.141,.431)
+const muted=rgb(.278,.333,.412)
+const line=rgb(.886,.91,.941)
+const surface=rgb(.902,.945,1)
 const columns={date:margin+10,description:margin+93,moneyIn:364,moneyOut:451,balance:width-margin-10}
 const format=value=>value===null?'Unavailable':money(value)
 
-export async function makeStatementPdf(statement,svg) {
+export async function makeStatementPdf(statement,logoBytes) {
  const pdf=await PDFDocument.create()
+ const logo=await pdf.embedPng(logoBytes)
  const regular=await pdf.embedFont(StandardFonts.Helvetica)
  const bold=await pdf.embedFont(StandardFonts.HelveticaBold)
  const glyphs=new Set(regular.getCharacterSet())
  const printable=value=>[...String(value)].map(char=>glyphs.has(char.codePointAt(0))?char:'?').join('')
  let page,y
- pdf.setTitle('Masrif Account Statement - '+statement.label)
+ pdf.setTitle('SKEB-Pro Account Statement - '+statement.label)
  function startPage(first) {
    page=pdf.addPage([width,height])
-   drawLogo(page,svg,height-32,width)
+   drawLogo(page,logo,height-32,width)
    page.drawText(receiptBrand,{x:(width-regular.widthOfTextAtSize(receiptBrand,11))/2,y:height-90,size:11,font:regular,color:teal})
    page.drawText('Account statement',{x:margin,y:height-133,size:24,font:bold,color:ink})
    page.drawText(statement.label+'  |  ATLAS Savings Account-i - Account ending 4812',{x:margin,y:height-154,size:10,font:regular,color:muted})
@@ -75,5 +76,5 @@ export async function makeStatementPdf(statement,svg) {
 
 export async function downloadStatement(statement) {
  const bytes=await makeStatementPdf(statement,await loadBrandLogo())
- savePdf(bytes,'masrif-statement-'+statement.month+'.pdf')
+ savePdf(bytes,'skeb-pro-statement-'+statement.month+'.pdf')
 }

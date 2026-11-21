@@ -2,7 +2,7 @@ import { readDemo } from './demoStorage'
 
 export const credentialKey = 'masrif-demo-credentials'
 export const trustedDeviceKey = 'masrif-session-trusted-device'
-export const sampleCredentials = {username:'farah.demo',password:'Masrif demo password'}
+export const sampleCredentials = {username:'farah.demo',password:'SKEB-Pro demo password'}
 export const savedCredentials = () => readDemo(credentialKey,null)
 
 async function passwordDigest(password,salt) {

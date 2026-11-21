@@ -20,8 +20,8 @@ export function Receipt({item}) {
    }
  }
  return <div className="stack">
-   <article className="branded-receipt" aria-label="Masrif transaction receipt">
-     <header><img src={receiptLogo} width="159" height="44" alt="Masrif"/><small>{receiptBrand}</small><h2>Transaction receipt</h2></header>
+   <article className="branded-receipt" aria-label="SKEB-Pro transaction receipt">
+     <header><img src={receiptLogo} width="159" height="38" alt="SKEB-Pro"/><small>{receiptBrand}</small><h2>Transaction receipt</h2></header>
      <div className="receipt-amount"><small>Total amount</small><strong>{amount}</strong></div>
      <dl>{rows.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
      <small className="receipt-notice">{receiptNotice}</small>

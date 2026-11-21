@@ -128,7 +128,7 @@ export function SupportDesk({records=[]}) {
   function submit() {
     if (!topic||!message.trim()) return
     const date = new Date().toISOString()
-    const ticket = {id:'MSR-'+crypto.randomUUID().slice(0,8).toUpperCase(),topic,message:message.trim(),created:date,
+    const ticket = {id:'SKB-'+crypto.randomUUID().slice(0,8).toUpperCase(),topic,message:message.trim(),created:date,
       incident:incident?.title,transaction:canLink&&transaction?{id:transaction.id,name:transaction.name,amount:transaction.amount}:null,
       status:'Open',timeline:[{text:'Ticket opened',date}]}
     save([ticket,...tickets])
@@ -188,7 +188,7 @@ export function DemoLegal({section}) {
   </div>
   if (section==='legal/privacy') return <div className="stack"><PrototypePrivacy/><ExternalLink href="/privacy">Open the public privacy notice</ExternalLink></div>
   return <article className="stack demo-legal">
-    <p className="notice">Masrif prototype notice</p>
+    <p className="notice">SKEB-Pro prototype notice</p>
       <section><h3>Using the demo</h3><p>Explore the screens with fictional details. Account balances, payment results and application statuses are for demonstration.</p></section>
       <section><h3>Payments and applications</h3><p>Demo actions do not transfer funds, issue cards, submit official documents or enter into a contract.</p></section>
       <section><h3>Official services</h3><p>Use the relevant provider’s official service for live transactions, applications and published terms.</p></section>

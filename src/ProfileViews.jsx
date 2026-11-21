@@ -14,7 +14,7 @@ const notices = [
   ['device','Security','New device added','Was this you?','Yesterday'],
   ['pintar','Updates','Pintar update','Your application is under review','Mon'],
   ['zakat','Payments','Zakat receipt ready','MUIP, RM 300.00','12 Mar'],
-  ['welcome','Updates','Welcome to Masrif','Your fictional demo account is ready to explore.','19 Nov'],
+  ['welcome','Updates','Welcome to SKEB-Pro','Your fictional demo account is ready to explore.','19 Nov'],
 ]
 const faq = [
  ['How do I link my Atlas account?','Open the welcome screen and choose Link existing ATLAS account to try the demo.'],
@@ -46,7 +46,7 @@ export function ProfileMenu({go}) {
    <div className="profile-card"><span className="avatar" aria-hidden="true">{nameInitials(name)}</span><div><h2>{name}</h2><p>Atlas ••4812</p></div></div>
    {profileLinks.map(([label,slug])=><ProfileRow title={label} key={slug} onClick={()=>go('/profile/'+slug)}/>)}
    <button className="button logout-row" onClick={()=>setConfirmLogout(true)}>Log out</button>
-   {confirmLogout&&<ConfirmDialog title="Log out of Masrif?" action="Log out" onConfirm={()=>{sessionStorage.removeItem(signedInKey);sessionStorage.setItem(signedOutKey,'true');go('/login',true)}} onCancel={()=>setConfirmLogout(false)}><p>You’ll need to sign in again to continue.</p></ConfirmDialog>}
+   {confirmLogout&&<ConfirmDialog title="Log out of SKEB-Pro?" action="Log out" onConfirm={()=>{sessionStorage.removeItem(signedInKey);sessionStorage.setItem(signedOutKey,'true');go('/login',true)}} onCancel={()=>setConfirmLogout(false)}><p>You’ll need to sign in again to continue.</p></ConfirmDialog>}
  </section>
 }
 
@@ -61,7 +61,7 @@ export function ProfilePage({section,go,appearance,applyAppearance,records,reset
  if(section==='settings') return <section className="stack"><h2>Preferences</h2>
   <ProfileRow title={'Appearance · '+(appearanceLabels[choice]||appearanceLabels.System)} onClick={open('settings/appearance')}/>
   <ProfileRow title="Language · English" onClick={open('settings/language')}/>
-  <ProfileRow title="Delete account" detail="Remove saved Masrif demo data" onClick={open('settings/delete-account')}/>
+  <ProfileRow title="Delete account" detail="Remove saved SKEB-Pro demo data" onClick={open('settings/delete-account')}/>
   <details className="profile-disclosure"><summary>Demo controls</summary><Button kind="secondary" onClick={()=>setConfirmReset(true)}>Reset demo account</Button></details>
   {confirmReset&&<ConfirmDialog title="Reset the demo account?" action="Reset demo account" onConfirm={reset} onCancel={()=>setConfirmReset(false)}><p>This clears demo transactions, applications, support tickets and preferences on this device.</p></ConfirmDialog>}
  </section>

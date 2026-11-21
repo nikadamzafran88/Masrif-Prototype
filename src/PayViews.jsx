@@ -126,12 +126,12 @@ function ReceiveMoney({dark}) {
  const [custom,setCustom]=useState('')
  const generated=usePaymentCode(receiveCode(amount))
  function change(value) {setAmount(value);setView('code')}
- const card='Masrif demo receiving code\nFarah Amin · ATLAS •••• 4812\n'+(amount?money(amount):'Open amount')+'\nDemo only. No money will move.'
+ const card='SKEB-Pro demo receiving code\nFarah Amin · ATLAS •••• 4812\n'+(amount?money(amount):'Open amount')+'\nDemo only. No money will move.'
  async function share() {
    try {
      const bytes=Uint8Array.from(atob(generated.image.split(',')[1]),character=>character.charCodeAt(0))
-     const file=new File([bytes],'masrif-demo-receive.png',{type:'image/png'})
-     if(navigator.canShare?.({files:[file]})) await navigator.share({title:'Masrif demo receiving QR',text:card,files:[file]})
+     const file=new File([bytes],'skeb-pro-demo-receive.png',{type:'image/png'})
+     if(navigator.canShare?.({files:[file]})) await navigator.share({title:'SKEB-Pro demo receiving QR',text:card,files:[file]})
      else {
        await navigator.clipboard.writeText(card)
        setFeedback('Demo details copied. Use Save demo QR for the scannable image.')
@@ -141,9 +141,9 @@ function ReceiveMoney({dark}) {
    }
  }
  const code=<div className="result-card demo-code receive-card">
-  <div className="receive-brand-box"><img className="receive-brand-logo" src={'/masrif/access-logo-'+(dark?'dark':'light')+'.svg'} width="159" height="44" alt="Masrif"/></div>
+  <div className="receive-brand-box"><img className="receive-brand-logo" src={'/brand/logo-'+(dark?'dark':'light')+'.png'} width="159" height="38" alt="SKEB-Pro"/></div>
   <div className="receive-account"><strong>Farah Amin</strong><small>{amount?'Requested amount · '+money(amount):'ATLAS account •••• 4812'}</small></div>
-  <PaymentCodeDisplay result={generated} label="Masrif demo receiving QR code"/>
+  <PaymentCodeDisplay result={generated} label="SKEB-Pro demo receiving QR code"/>
   <small>DEMO CODE · No money will move</small>
  </div>
  if(view==='amount') return <div className="stack pay-amount-presets"><h2>Set amount</h2>
@@ -157,7 +157,7 @@ function ReceiveMoney({dark}) {
  </div>
  if(view==='share') return <div className="stack payment-code-layout"><h2>Share demo QR</h2>{code}
   <Button onClick={share} disabled={!generated?.image}>Share QR</Button>
-  {generated?.image&&<a className="button secondary pay-download" href={generated.image} download="masrif-demo-receive.png">Save demo QR</a>}
+  {generated?.image&&<a className="button secondary pay-download" href={generated.image} download="skeb-pro-demo-receive.png">Save demo QR</a>}
   <Button kind="secondary" onClick={()=>setView('code')}>Back to Receive</Button>{feedback&&<p className="notice" role="status">{feedback}</p>}
  </div>
  return <div className="stack payment-code-layout"><p>Share your QR to receive money.</p>{code}<Button onClick={()=>amount?change(0):setView('amount')}>{amount?'Clear amount':'Set amount'}</Button><Button kind="secondary" onClick={()=>setView('share')}>Save / share preview</Button></div>

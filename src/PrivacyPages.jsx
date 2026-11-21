@@ -24,8 +24,8 @@ export function AtlasSupport({privacy=false,closure=false}) {
 
 export function PrototypePrivacy() {
   return <article className="stack demo-legal privacy-content">
-    <p className="notice">Masrif is an interactive prototype. Use fictional account and contact details.</p>
-    <section className="module-panel stack"><h2>What this browser stores</h2><p>Masrif stores demo profile details, transactions, application drafts, support tickets, consent choices and preferences to let you try the journeys. Session data is kept in this tab. Other demo data stays in this browser until you delete it or clear the site’s storage.</p></section>
+    <p className="notice">SKEB-Pro is an interactive prototype. Use fictional account and contact details.</p>
+    <section className="module-panel stack"><h2>What this browser stores</h2><p>SKEB-Pro stores demo profile details, transactions, application drafts, support tickets, consent choices and preferences to let you try the journeys. Session data is kept in this tab. Other demo data stays in this browser until you delete it or clear the site’s storage.</p></section>
     <section className="module-panel stack"><h2>Permissions and online services</h2><p>The web app can use your camera for QR scanning and your location to suggest nearby services. You can revoke access in your browser settings. QR images are decoded locally. Online worship tools contact external services for content such as maps and prayer timetables.</p></section>
     <section className="module-panel stack"><h2>Your choices</h2><p>You can change your marketing choice under Profile → Notifications and review changes under Profile → Legal → Consent history.</p><PrivacyLink href="/account-deletion" icon="trash">Delete demo account data</PrivacyLink></section>
     <AtlasSupport privacy/>
@@ -55,9 +55,9 @@ function DeletionComplete() {
   return <section className="stack privacy-content">
     <div className="result-card privacy-result" role="status">
       <span className="tile-icon"><Icon name="check"/></span>
-      <h2>Demo data deleted</h2><p>Masrif’s saved demo data was cleared from this browser and tab.</p>
+      <h2>Demo data deleted</h2><p>SKEB-Pro’s saved demo data was cleared from this browser and tab.</p>
     </div>
-    <PrivacyLink href="/" icon="home" onClick={()=>sessionStorage.removeItem('masrif-deletion-complete')}>Return to Masrif</PrivacyLink>
+    <PrivacyLink href="/" icon="home" onClick={()=>sessionStorage.removeItem('masrif-deletion-complete')}>Return to SKEB-Pro</PrivacyLink>
   </section>
 }
 
@@ -103,7 +103,7 @@ export function DeleteDemoAccount({inApp=false}) {
     <AtlasSupport closure/>
     {confirm&&<ConfirmDialog destructive title="Delete your demo account?" action="Delete demo account" onCancel={()=>setConfirm(false)}
       onConfirm={()=>{if(inApp){clearDemoStorage();sessionStorage.setItem('masrif-deletion-complete','true');location.replace('/account-deletion')}else remove()}}>
-      <p>Your saved Masrif demo data in this browser will be removed.</p>
+      <p>Your saved SKEB-Pro demo data in this browser will be removed.</p>
     </ConfirmDialog>}
   </div>
 }
@@ -123,7 +123,7 @@ export function PublicPrivacyPage({path}) {
   const title = path==='/privacy'?'Privacy notice':path==='/support'?'Support':'Delete account'
   return <div className={'public-privacy app'+(dark?' dark':'')}>
     <header className="public-privacy-header">
-      <a href="/" onClick={()=>sessionStorage.removeItem('masrif-deletion-complete')}><img src={'/masrif/access-logo-'+(dark?'dark':'light')+'.svg'} width="159" height="44" alt="Masrif home"/></a>
+      <a href="/" onClick={()=>sessionStorage.removeItem('masrif-deletion-complete')}><img src={'/brand/logo-'+(dark?'dark':'light')+'.png'} width="159" height="38" alt="SKEB-Pro home"/></a>
     </header>
     <main className="stack">
     <h1>{title}</h1>

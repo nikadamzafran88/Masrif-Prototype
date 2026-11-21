@@ -43,6 +43,8 @@ try {
   const run = async expression => (await send('Runtime.evaluate', {expression, returnByValue: true, awaitPromise: true})).result?.value
 
   await send('Page.enable')
+  // DARK_OUT=<dir> renders dark-mode review shots there instead of updating public/screens.
+  if (process.env.DARK_OUT) await send('Page.addScriptToEvaluateOnNewDocument', {source: "localStorage.setItem('masrif-appearance','Dark')"})
   await send('Emulation.setDeviceMetricsOverride', {width: 390, height: 844, deviceScaleFactor: 1, mobile: false})
   fs.mkdirSync(outDir, {recursive: true})
   const screens = screenGroups.flatMap(group => group.items)
@@ -55,7 +57,7 @@ try {
     await wait(700)
     if (await run(`/unavailable in the demo|could not be found|Complete the previous step/i.test(document.body.innerText)`)) warnings.push(screen)
     const shot = await send('Page.captureScreenshot', {format: 'webp', quality: 82})
-    fs.writeFileSync(path.join(root, 'public', screenImage(screen)), Buffer.from(shot.data, 'base64'))
+    fs.writeFileSync(process.env.DARK_OUT ? path.join(process.env.DARK_OUT, path.basename(screenImage(screen))) : path.join(root, 'public', screenImage(screen)), Buffer.from(shot.data, 'base64'))
     process.stdout.write(`\r${++done}/${screens.length} ${screen}`.padEnd(70))
   }
   console.log('\nSaved', done, 'screenshots to public/screens')
