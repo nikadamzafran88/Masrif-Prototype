@@ -1192,7 +1192,8 @@ label.access-option { min-height: 52px; justify-content: flex-start; }
   box-shadow: 0 12px 30px #081d4e33;
 }
 .password-signin input { min-height: 52px; background: #f3f6fc; }
-.password-forgot { align-self: flex-end; min-height: 44px; margin-top: -10px; }
+.password-links { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -10px; }
+.password-forgot { min-height: 44px; }
 .password-demo {
   display: grid;
   gap: 7px;
@@ -1205,7 +1206,7 @@ label.access-option { min-height: 52px; justify-content: flex-start; }
 .password-demo dl { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 4px 12px; font-size: .78rem; }
 .password-demo dt { color: var(--muted); }
 .password-demo dd { font-weight: 650; overflow-wrap: anywhere; }
-.password-sample { justify-self: start; min-height: 44px; }
+.password-sample { min-height: 44px; }
 .password-signin .access-signin-link { padding-top: 4px; border-top: 1px solid var(--line); }
 .password-signin .registration-form-card .primary { margin-top: 0; }
 .password-signin .registration-form-card .primary:active:not(:disabled) { background: #092055; }
@@ -1519,9 +1520,20 @@ label.access-option { min-height: 52px; justify-content: flex-start; }
   color: #092159;
   outline: 0;
 }
+.home-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  height: 28px;
+  width: auto;
+  transform: translate(-50%, -50%);
+  filter: brightness(0) invert(1);
+  pointer-events: none;
+}
 .home-profile-name { font-weight: 750; }
 .home-profile > svg { opacity: .78; }
-.home-toolbar.compact .home-profile { border-radius: 50%; padding: 4px; min-width: 46px; justify-content: center; }
+.home-toolbar:not(.compact) .home-profile > svg { display: none; }
+.home-toolbar .home-profile { border-radius: 50%; padding: 4px; min-width: 46px; justify-content: center; }
 .home-notifications {
   border-radius: 50%;
   border: 1px solid #ffffff45;
@@ -1585,8 +1597,8 @@ label.access-option { min-height: 52px; justify-content: flex-start; }
 .home-update-copy p { font-size: .82rem; color: white; }
 @media (max-width: 350px) { .home-toolbar { padding-inline: 15px; } }
 
-.app[data-screen="home"] .hero { min-height: calc(270px + env(safe-area-inset-top)); }
-.app[data-screen="home"] .hero-content { margin-top: 14px; }
+.app[data-screen="home"] .hero { min-height: calc(290px + env(safe-area-inset-top)); }
+.app[data-screen="home"] .hero-content { margin-top: 30px; }
 .home-quick { gap: 12px; }
 .home-quick .quick-actions {
   gap: clamp(6px, 2vw, 12px);
@@ -2198,3 +2210,30 @@ label.access-option { min-height: 52px; justify-content: flex-start; }
 .insight-detail-category-amount { text-align: end; font-variant-numeric: tabular-nums; }
 .eskeb-panel { justify-items: center; text-align: center; }
 .eskeb-logo { display: block; width: min(230px, 80%); height: auto; margin-bottom: 4px; }
+
+/* Profile: SKEB-Pro navy header band behind the status bar, title and account card. */
+.app[data-screen="profile"] { --profile-band: linear-gradient(90deg,#0a2e81,#0f3181); }
+.app[data-screen="profile"] .status-spacer { visibility: visible; background: var(--profile-band); color: transparent; }
+.app[data-screen="profile"] > .screen-status.status-fixed { color: #fff; }
+.app[data-screen="profile"][data-scrolled] > .screen-status.status-fixed { background: #0a2e81; }
+.app[data-screen="profile"] .page-header.hub { background: var(--profile-band); color: #fff; padding-bottom: 6px; }
+.app[data-screen="profile"] main { padding-top: 0; }
+.app[data-screen="profile"] .profile-menu .profile-card {
+  margin: 0 -21px 0;
+  border-radius: 0;
+  padding: 8px 21px 38px;
+  position: relative;
+  background: var(--profile-band);
+  color: #fff;
+}
+.app[data-screen="profile"] .profile-menu .profile-card::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 26px;
+  background: var(--bg);
+  border-radius: 26px 26px 0 0;
+}
+.app[data-screen="profile"] .profile-card p { color: #c9d6f5; }
+.app[data-screen="profile"] .profile-card .avatar,
+.app.dark[data-screen="profile"] .profile-card .avatar { background: #dee5f6; color: #092159; }

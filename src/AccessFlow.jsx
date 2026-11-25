@@ -638,20 +638,15 @@ function PasswordStep({mode,username:initialUsername='',stored,locked,logo,onBac
          <button type="button" className="icon-button" aria-label={visible?'Hide password':'Show password'} aria-controls="masrif-password" onClick={()=>setVisible(value=>!value)}><Icon name={visible?'eyeOff':'eye'} size={20}/></button>
        </div>
      </div>
-     {onForgot&&<button type="button" className="text-button password-forgot" onClick={onForgot}>Forgot password?</button>}
+     {((signin&&!stored)||onForgot)&&<div className="password-links">
+       {signin&&!stored?<button type="button" className="text-button password-sample" onClick={()=>{setUsername(sampleCredentials.username);setPassword(sampleCredentials.password);setError('')}}>Use sample credentials</button>:<span/>}
+       {onForgot&&<button type="button" className="text-button password-forgot" onClick={onForgot}>Forgot password?</button>}
+     </div>}
      {!signin&&<><small>Use at least 15 characters.</small>
        <label>Confirm password<input type="password" autoComplete="new-password" maxLength={128} required
          value={confirmation} onChange={event=>{setConfirmation(event.target.value);setError('')}}/></label></>}
      {locked&&<p className="notice passcode-error" role="alert">Your demo account is locked. Reset your password to continue.</p>}
      {error&&<p className="notice passcode-error" role="alert">{error}</p>}
-     {signin&&!stored&&<section className="password-demo" aria-label="Demo sign-in details">
-       <h2>Demo account</h2>
-       <dl>
-         <dt>Username</dt><dd>{sampleCredentials.username}</dd>
-         <dt>Password</dt><dd>{sampleCredentials.password}</dd>
-       </dl>
-       <button type="button" className="text-button password-sample" onClick={()=>{setUsername(sampleCredentials.username);setPassword(sampleCredentials.password);setError('')}}>Use sample credentials</button>
-     </section>}
      {signin&&<Button type="submit" disabled={busy||locked}>{busy?'Please wait…':submitLabel}</Button>}
      {onRegister&&<RegisterPrompt onRegister={onRegister}/>}
    </form>
