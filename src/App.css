@@ -1524,10 +1524,9 @@ label.access-option { min-height: 52px; justify-content: flex-start; }
   position: absolute;
   left: 50%;
   top: 50%;
-  height: 28px;
+  height: 40px;
   width: auto;
   transform: translate(-50%, -50%);
-  filter: brightness(0) invert(1);
   pointer-events: none;
 }
 .home-profile-name { font-weight: 750; }

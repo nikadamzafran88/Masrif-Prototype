@@ -299,7 +299,7 @@ export default function App({preview=false}) {
         <button className="home-profile" aria-label={firstName+", open profile"} onClick={()=>go('/profile')}>
           <span className="avatar" aria-hidden="true">{nameInitials(profileName)}</span>
         </button>
-        <img className="home-logo" src="/brand/logo-light.png" width="116" height="28" alt="SKEB-Pro"/>
+        <img className="home-logo" src="/brand/skeb-white.png" width="93" height="40" alt="SKEB-Pro"/>
         <button className="icon-button home-notifications" aria-label="Notifications" onClick={()=>go('/inbox')}><Icon name="bell" size={21}/></button>
       </header>
       <div className="hero">
